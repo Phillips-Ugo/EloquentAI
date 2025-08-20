@@ -47,7 +47,7 @@ class EnhancedRealTimeServer:
         self.running = False
         
         # Initialize OpenAI client with better error handling
-        openai_api_key = os.getenv("OPENAI_API_KEY")
+        openai_api_key = os.getenv('OPENAI_API_KEY')
         if openai_api_key and openai_api_key.startswith('sk-'):
             openai.api_key = openai_api_key
             self.openai_available = True
