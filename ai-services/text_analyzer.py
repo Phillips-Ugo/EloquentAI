@@ -21,8 +21,11 @@ class TextAnalyzer:
             raise ValueError("OPENAI_API_KEY is required")
         
         logger.info("Initializing OpenAI client with API key")
-        # Use hardcoded API key for testing
-        self.client = openai.OpenAI(api_key="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")
+        # Use environment variable for API key
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+        self.client = openai.OpenAI(api_key=api_key)
         
     def _load_env_vars(self):
         """Load environment variables from env.local file"""
