@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Analysis Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow: hidden;
+        }
+        .demo-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin: 10px 0 0 0;
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .video-feed {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .video-canvas {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .pose-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .pose-point {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: pulse 2s infinite;
+        }
+        .pose-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, #00ff88, #00ccff);
+            transform-origin: left center;
+        }
+        .face-detection {
+            position: absolute;
+            border: 3px solid #ff6b6b;
+            border-radius: 50%;
+            animation: face-pulse 1.5s infinite;
+        }
+        .eye-tracking {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ffd700;
+            border-radius: 50%;
+            animation: eye-blink 3s infinite;
+        }
+        .metrics-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+        .metric-label {
+            font-weight: 500;
+        }
+        .metric-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .progress-bar {
+            width: 100px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        .status {
+            text-align: center;
+            font-size: 1.1em;
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .analysis-summary {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .summary-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .summary-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .summary-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+        @keyframes face-pulse {
+            0%, 100% { border-color: #ff6b6b; }
+            50% { border-color: #ff8e8e; }
+        }
+        @keyframes eye-blink {
+            0%, 90%, 100% { opacity: 1; }
+            95% { opacity: 0.3; }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        .recording-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 12px;
+            height: 12px;
+            background: #ff4444;
+            border-radius: 50%;
+            animation: recording-pulse 1s infinite;
+        }
+        @keyframes recording-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="header">
+            <h1>📹 Video Analysis Demo</h1>
+            <p>Advanced AI-powered body language and facial expression analysis</p>
+        </div>
+
+        <div class="status pulse">
+            🔴 Live video analysis in progress... Detecting poses and expressions
+        </div>
+
+        <div class="demo-grid">
+            <div class="video-feed">
+                <h3>Live Video Feed with AI Overlay</h3>
+                <div class="video-canvas">
+                    <div class="recording-indicator"></div>
+                    <div class="pose-overlay" id="poseOverlay">
+                        <!-- Pose detection points and lines -->
+                        <div class="pose-point" style="top: 20%; left: 50%;"></div>
+                        <div class="pose-point" style="top: 25%; left: 45%;"></div>
+                        <div class="pose-point" style="top: 25%; left: 55%;"></div>
+                        <div class="pose-point" style="top: 35%; left: 50%;"></div>
+                        <div class="pose-point" style="top: 45%; left: 40%;"></div>
+                        <div class="pose-point" style="top: 45%; left: 60%;"></div>
+                        <div class="pose-point" style="top: 55%; left: 50%;"></div>
+                        <div class="pose-point" style="top: 65%; left: 45%;"></div>
+                        <div class="pose-point" style="top: 65%; left: 55%;"></div>
+                        <div class="pose-point" style="top: 75%; left: 50%;"></div>
+                        
+                        <!-- Pose connection lines -->
+                        <div class="pose-line" style="top: 22%; left: 47%; width: 6%; transform: rotate(0deg);"></div>
+                        <div class="pose-line" style="top: 30%; left: 50%; width: 6%; transform: rotate(0deg);"></div>
+                        <div class="pose-line" style="top: 40%; left: 42%; width: 6%; transform: rotate(45deg);"></div>
+                        <div class="pose-line" style="top: 40%; left: 52%; width: 6%; transform: rotate(-45deg);"></div>
+                        <div class="pose-line" style="top: 50%; left: 50%; width: 6%; transform: rotate(0deg);"></div>
+                        <div class="pose-line" style="top: 60%; left: 47%; width: 6%; transform: rotate(0deg);"></div>
+                        <div class="pose-line" style="top: 70%; left: 50%; width: 6%; transform: rotate(0deg);"></div>
+                        
+                        <!-- Face detection -->
+                        <div class="face-detection" style="top: 15%; left: 40%; width: 20%; height: 20%;"></div>
+                        
+                        <!-- Eye tracking -->
+                        <div class="eye-tracking" style="top: 22%; left: 45%;"></div>
+                        <div class="eye-tracking" style="top: 22%; left: 55%;"></div>
+                    </div>
+                    
+                    <!-- Simulated person silhouette -->
+                    <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
+                        <div style="width: 60px; height: 120px; background: rgba(255, 255, 255, 0.1); border-radius: 30px; position: relative;">
+                            <div style="width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; position: absolute; top: -20px; left: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metrics-panel">
+                <h3>📊 Real-time Analysis Metrics</h3>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Posture Score</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 85%; background: #00ff88;"></div>
+                        </div>
+                        <span class="metric-value">85%</span>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Eye Contact</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 92%; background: #00ccff;"></div>
+                        </div>
+                        <span class="metric-value">92%</span>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Facial Expressions</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 78%; background: #ff6b6b;"></div>
+                        </div>
+                        <span class="metric-value">78%</span>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Hand Gestures</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 88%; background: #ffd700;"></div>
+                        </div>
+                        <span class="metric-value">88%</span>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Body Movement</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 76%; background: #ff8e8e;"></div>
+                        </div>
+                        <span class="metric-value">76%</span>
+                    </div>
+                </div>
+                
+                <div class="metric-row">
+                    <span class="metric-label">Confidence Level</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 94%; background: #a855f7;"></div>
+                        </div>
+                        <span class="metric-value">94%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="analysis-summary">
+            <h3>🎯 Analysis Summary</h3>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-value">Excellent</div>
+                    <div class="summary-label">Overall Performance</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">8.7/10</div>
+                    <div class="summary-label">Presentation Score</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">Strong</div>
+                    <div class="summary-label">Body Language</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">Good</div>
+                    <div class="summary-label">Facial Expressions</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="startVideoAnalysis()">▶️ Start Analysis</button>
+            <button class="btn" onclick="pauseVideoAnalysis()">⏸️ Pause</button>
+            <button class="btn" onclick="resetVideoAnalysis()">🔄 Reset</button>
+        </div>
+    </div>
+
+    <script>
+        let analysisInterval;
+        let posePoints = [];
+
+        function initVideoAnalysis() {
+            // Initialize pose points
+            posePoints = document.querySelectorAll('.pose-point');
+            
+            // Start real-time analysis simulation
+            startVideoAnalysis();
+        }
+
+        function startVideoAnalysis() {
+            document.querySelector('.status').textContent = '🔴 Live video analysis in progress... Detecting poses and expressions';
+            document.querySelector('.status').classList.add('pulse');
+            
+            // Simulate real-time pose detection updates
+            analysisInterval = setInterval(() => {
+                posePoints.forEach(point => {
+                    const randomX = Math.random() * 10 - 5;
+                    const randomY = Math.random() * 10 - 5;
+                    const currentLeft = parseFloat(point.style.left);
+                    const currentTop = parseFloat(point.style.top);
+                    
+                    point.style.left = (currentLeft + randomX) + '%';
+                    point.style.top = (currentTop + randomY) + '%';
+                });
+                
+                // Update progress bars randomly
+                const progressBars = document.querySelectorAll('.progress-fill');
+                progressBars.forEach(bar => {
+                    const currentWidth = parseFloat(bar.style.width);
+                    const change = (Math.random() - 0.5) * 10;
+                    const newWidth = Math.max(60, Math.min(100, currentWidth + change));
+                    bar.style.width = newWidth + '%';
+                });
+            }, 1000);
+        }
+
+        function pauseVideoAnalysis() {
+            document.querySelector('.status').textContent = '⏸️ Video analysis paused';
+            document.querySelector('.status').classList.remove('pulse');
+            clearInterval(analysisInterval);
+        }
+
+        function resetVideoAnalysis() {
+            document.querySelector('.status').textContent = '🔄 Ready to start video analysis';
+            document.querySelector('.status').classList.remove('pulse');
+            clearInterval(analysisInterval);
+            
+            // Reset pose points to original positions
+            posePoints.forEach((point, index) => {
+                const originalPositions = [
+                    { top: '20%', left: '50%' },
+                    { top: '25%', left: '45%' },
+                    { top: '25%', left: '55%' },
+                    { top: '35%', left: '50%' },
+                    { top: '45%', left: '40%' },
+                    { top: '45%', left: '60%' },
+                    { top: '55%', left: '50%' },
+                    { top: '65%', left: '45%' },
+                    { top: '65%', left: '55%' },
+                    { top: '75%', left: '50%' }
+                ];
+                
+                if (originalPositions[index]) {
+                    point.style.top = originalPositions[index].top;
+                    point.style.left = originalPositions[index].left;
+                }
+            });
+            
+            // Reset progress bars
+            const progressBars = document.querySelectorAll('.progress-fill');
+            const defaultValues = [85, 92, 78, 88, 76, 94];
+            progressBars.forEach((bar, index) => {
+                if (defaultValues[index]) {
+                    bar.style.width = defaultValues[index] + '%';
+                }
+            });
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initVideoAnalysis);
+    </script>
+</body>
+</html> 

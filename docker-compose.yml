@@ -1,0 +1,103 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: eloquent_ai
+      POSTGRES_USER: eloquent_user
+      POSTGRES_PASSWORD: eloquent_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eloquent_user -d eloquent_ai"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Spring Boot Backend (API Gateway)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/eloquent_ai
+      SPRING_DATASOURCE_USERNAME: eloquent_user
+      SPRING_DATASOURCE_PASSWORD: eloquent_password
+      SPEECH_SERVICE_URL: http://speech-service:8001
+      VIDEO_SERVICE_URL: http://video-service:8002
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Python Speech Analysis Service
+  speech-service:
+    build:
+      context: ./speech-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      MODEL_CACHE_DIR: /app/models
+    volumes:
+      - speech_models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Python Video Analysis Service
+  video-service:
+    build:
+      context: ./video-service
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      MODEL_CACHE_DIR: /app/models
+    volumes:
+      - video_models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:8080/api
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+  uploads_data:
+  speech_models:
+  video_models:
+
+networks:
+  default:
+    name: eloquent_ai_network 

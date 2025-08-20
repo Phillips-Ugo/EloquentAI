@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Reports Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow: hidden;
+        }
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin: 10px 0 0 0;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .main-charts {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .chart-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chart-canvas {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        .bar-chart {
+            display: flex;
+            align-items: end;
+            justify-content: space-around;
+            height: 100%;
+            padding: 20px 10px 10px 10px;
+        }
+        .bar {
+            width: 30px;
+            background: linear-gradient(to top, #4facfe, #00f2fe);
+            border-radius: 3px 3px 0 0;
+            position: relative;
+            transition: height 0.5s ease;
+        }
+        .bar-label {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8em;
+            white-space: nowrap;
+        }
+        .line-chart {
+            position: relative;
+            height: 100%;
+            padding: 20px;
+        }
+        .line-path {
+            fill: none;
+            stroke: #00ff88;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .line-point {
+            fill: #00ff88;
+            stroke: white;
+            stroke-width: 2;
+        }
+        .sidebar {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        .metric-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .progress-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .progress-item {
+            margin-bottom: 15px;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        .insights-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        .insight-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            flex-shrink: 0;
+        }
+        .insight-text {
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .status {
+            text-align: center;
+            font-size: 1.1em;
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .chart-animation {
+            animation: chart-grow 2s ease-out;
+        }
+        @keyframes chart-grow {
+            from { transform: scaleY(0); }
+            to { transform: scaleY(1); }
+        }
+        .export-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .export-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .export-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="header">
+            <h1>📊 Detailed Reports Demo</h1>
+            <p>Comprehensive analytics and actionable insights for communication improvement</p>
+        </div>
+
+        <div class="status pulse">
+            📈 Generating comprehensive analysis report... Processing data and creating visualizations
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="main-charts">
+                <div class="chart-container">
+                    <div class="chart-title">
+                        📊 Performance Metrics Over Time
+                    </div>
+                    <div class="chart-canvas">
+                        <div class="bar-chart" id="performanceChart">
+                            <div class="bar" style="height: 60%;">
+                                <div class="bar-label">Week 1</div>
+                            </div>
+                            <div class="bar" style="height: 75%;">
+                                <div class="bar-label">Week 2</div>
+                            </div>
+                            <div class="bar" style="height: 85%;">
+                                <div class="bar-label">Week 3</div>
+                            </div>
+                            <div class="bar" style="height: 92%;">
+                                <div class="bar-label">Week 4</div>
+                            </div>
+                            <div class="bar" style="height: 88%;">
+                                <div class="bar-label">Week 5</div>
+                            </div>
+                            <div class="bar" style="height: 95%;">
+                                <div class="bar-label">Week 6</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">
+                        📈 Improvement Trends
+                    </div>
+                    <div class="chart-canvas">
+                        <svg width="100%" height="100%" viewBox="0 0 400 200">
+                            <path class="line-path" d="M 20 160 Q 80 140 120 120 T 200 80 T 280 60 T 360 40" />
+                            <circle class="line-point" cx="20" cy="160" r="4" />
+                            <circle class="line-point" cx="80" cy="140" r="4" />
+                            <circle class="line-point" cx="120" cy="120" r="4" />
+                            <circle class="line-point" cx="200" cy="80" r="4" />
+                            <circle class="line-point" cx="280" cy="60" r="4" />
+                            <circle class="line-point" cx="360" cy="40" r="4" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="export-options">
+                    <button class="export-btn">📄 Export PDF</button>
+                    <button class="export-btn">📊 Export CSV</button>
+                    <button class="export-btn">📈 Share Report</button>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="metric-card">
+                    <div class="metric-value">87%</div>
+                    <div class="metric-label">Overall Score</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">+15%</div>
+                    <div class="metric-label">Improvement</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">24</div>
+                    <div class="metric-label">Sessions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">A+</div>
+                    <div class="metric-label">Grade</div>
+                </div>
+
+                <div class="progress-section">
+                    <h3>🎯 Goal Progress</h3>
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span>Speech Clarity</span>
+                            <span>92%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 92%; background: #00ff88;"></div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span>Body Language</span>
+                            <span>85%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 85%; background: #4facfe;"></div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span>Confidence</span>
+                            <span>78%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 78%; background: #ff6b6b;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="insights-section">
+            <h3>💡 Key Insights & Recommendations</h3>
+            <div class="insight-item">
+                <div class="insight-icon" style="background: #00ff88;">✓</div>
+                <div class="insight-text">
+                    <strong>Excellent Progress:</strong> Your speech clarity has improved by 23% over the past 6 weeks. 
+                    Continue practicing the breathing exercises for even better results.
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon" style="background: #ffd700;">⚠</div>
+                <div class="insight-text">
+                    <strong>Area for Improvement:</strong> Eye contact duration could be increased by 15%. 
+                    Try the "3-second rule" during presentations.
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon" style="background: #4facfe;">💡</div>
+                <div class="insight-text">
+                    <strong>Pro Tip:</strong> Your hand gestures are well-timed and natural. 
+                    Consider incorporating more open palm gestures for better audience engagement.
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon" style="background: #ff6b6b;">🎯</div>
+                <div class="insight-text">
+                    <strong>Next Goal:</strong> Focus on reducing filler words by 50%. 
+                    Practice with the "pause and think" technique.
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="startReportGeneration()">📊 Generate Report</button>
+            <button class="btn" onclick="pauseReportGeneration()">⏸️ Pause</button>
+            <button class="btn" onclick="resetReportGeneration()">🔄 Reset</button>
+        </div>
+    </div>
+
+    <script>
+        let reportInterval;
+        let currentProgress = 0;
+
+        function initReportDemo() {
+            // Initialize chart animations
+            animateCharts();
+            
+            // Start report generation simulation
+            startReportGeneration();
+        }
+
+        function animateCharts() {
+            const bars = document.querySelectorAll('.bar');
+            bars.forEach((bar, index) => {
+                setTimeout(() => {
+                    bar.style.height = '0%';
+                    bar.style.transition = 'height 1s ease-out';
+                    setTimeout(() => {
+                        bar.style.height = bar.getAttribute('data-height') || '60%';
+                    }, 100);
+                }, index * 200);
+            });
+        }
+
+        function startReportGeneration() {
+            document.querySelector('.status').textContent = '📈 Generating comprehensive analysis report... Processing data and creating visualizations';
+            document.querySelector('.status').classList.add('pulse');
+            
+            // Simulate real-time data updates
+            reportInterval = setInterval(() => {
+                // Update progress bars
+                const progressBars = document.querySelectorAll('.progress-fill');
+                progressBars.forEach(bar => {
+                    const currentWidth = parseFloat(bar.style.width);
+                    const change = (Math.random() - 0.5) * 5;
+                    const newWidth = Math.max(70, Math.min(100, currentWidth + change));
+                    bar.style.width = newWidth + '%';
+                });
+                
+                // Update metric values
+                const metricValues = document.querySelectorAll('.metric-value');
+                metricValues.forEach(value => {
+                    if (value.textContent.includes('%')) {
+                        const currentValue = parseFloat(value.textContent);
+                        const change = (Math.random() - 0.5) * 3;
+                        const newValue = Math.max(80, Math.min(100, currentValue + change));
+                        value.textContent = Math.round(newValue) + '%';
+                    }
+                });
+                
+                currentProgress += 1;
+                if (currentProgress > 100) currentProgress = 0;
+            }, 2000);
+        }
+
+        function pauseReportGeneration() {
+            document.querySelector('.status').textContent = '⏸️ Report generation paused';
+            document.querySelector('.status').classList.remove('pulse');
+            clearInterval(reportInterval);
+        }
+
+        function resetReportGeneration() {
+            document.querySelector('.status').textContent = '🔄 Ready to generate new report';
+            document.querySelector('.status').classList.remove('pulse');
+            clearInterval(reportInterval);
+            currentProgress = 0;
+            
+            // Reset progress bars to default values
+            const progressBars = document.querySelectorAll('.progress-fill');
+            const defaultValues = [92, 85, 78];
+            progressBars.forEach((bar, index) => {
+                if (defaultValues[index]) {
+                    bar.style.width = defaultValues[index] + '%';
+                }
+            });
+            
+            // Reset metric values
+            const metricValues = document.querySelectorAll('.metric-value');
+            const defaultMetrics = ['87%', '+15%', '24', 'A+'];
+            metricValues.forEach((value, index) => {
+                if (defaultMetrics[index]) {
+                    value.textContent = defaultMetrics[index];
+                }
+            });
+            
+            // Re-animate charts
+            animateCharts();
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initReportDemo);
+    </script>
+</body>
+</html> 

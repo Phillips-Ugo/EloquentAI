@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EloquentAI - Feature Demos</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 3em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(45deg, #ff6b6b, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin: 15px 0 0 0;
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .demo-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .demo-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .demo-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        .demo-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .demo-description {
+            font-size: 1em;
+            opacity: 0.8;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .demo-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+        .demo-features li {
+            padding: 5px 0;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .demo-features li:before {
+            content: "✓ ";
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .demo-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        .demo-btn:active {
+            transform: translateY(0);
+        }
+        .overview-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .overview-item {
+            text-align: center;
+            padding: 15px;
+        }
+        .overview-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .overview-label {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .footer p {
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .tech-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .fade-in {
+            animation: fadeInUp 0.8s ease-out;
+        }
+        .demo-card:nth-child(1) { animation-delay: 0.1s; }
+        .demo-card:nth-child(2) { animation-delay: 0.2s; }
+        .demo-card:nth-child(3) { animation-delay: 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header fade-in">
+            <h1>EloquentAI</h1>
+            <p>Interactive Feature Demonstrations</p>
+        </div>
+
+        <div class="overview-section fade-in">
+            <h2 style="text-align: center; margin-bottom: 20px;">🚀 Platform Overview</h2>
+            <div class="overview-grid">
+                <div class="overview-item">
+                    <div class="overview-number">3</div>
+                    <div class="overview-label">Core Features</div>
+                </div>
+                <div class="overview-item">
+                    <div class="overview-number">95%+</div>
+                    <div class="overview-label">Accuracy Rate</div>
+                </div>
+                <div class="overview-item">
+                    <div class="overview-number">50+</div>
+                    <div class="overview-label">Languages</div>
+                </div>
+                <div class="overview-item">
+                    <div class="overview-number">2s</div>
+                    <div class="overview-label">Processing Time</div>
+                </div>
+            </div>
+            
+            <div class="tech-stack">
+                <span class="tech-badge">AI/ML</span>
+                <span class="tech-badge">Computer Vision</span>
+                <span class="tech-badge">Speech Recognition</span>
+                <span class="tech-badge">Real-time Analysis</span>
+                <span class="tech-badge">Advanced Analytics</span>
+            </div>
+        </div>
+
+        <div class="demo-grid">
+            <div class="demo-card fade-in">
+                <div class="demo-icon">🎤</div>
+                <div class="demo-title">Speech Analysis</div>
+                <div class="demo-description">
+                    Advanced AI-powered speech recognition and analysis with real-time transcription, 
+                    filler word detection, and speaking pace analysis.
+                </div>
+                <ul class="demo-features">
+                    <li>Real-time audio waveform visualization</li>
+                    <li>Live transcription with highlighting</li>
+                    <li>Speaking pace and clarity metrics</li>
+                    <li>Filler word detection and counting</li>
+                    <li>Multi-language support</li>
+                </ul>
+                <a href="speech-analysis-demo.html" class="demo-btn" target="_blank">
+                    ▶️ Launch Speech Demo
+                </a>
+            </div>
+
+            <div class="demo-card fade-in">
+                <div class="demo-icon">📹</div>
+                <div class="demo-title">Video Analysis</div>
+                <div class="demo-description">
+                    Comprehensive body language and facial expression analysis with pose detection, 
+                    eye contact tracking, and presentation posture evaluation.
+                </div>
+                <ul class="demo-features">
+                    <li>Real-time pose detection overlay</li>
+                    <li>Facial expression analysis</li>
+                    <li>Eye contact duration tracking</li>
+                    <li>Body posture evaluation</li>
+                    <li>Hand gesture recognition</li>
+                </ul>
+                <a href="video-analysis-demo.html" class="demo-btn" target="_blank">
+                    ▶️ Launch Video Demo
+                </a>
+            </div>
+
+            <div class="demo-card fade-in">
+                <div class="demo-icon">📊</div>
+                <div class="demo-title">Detailed Reports</div>
+                <div class="demo-description">
+                    Comprehensive analytics dashboard with interactive charts, progress tracking, 
+                    and actionable insights for continuous improvement.
+                </div>
+                <ul class="demo-features">
+                    <li>Interactive performance charts</li>
+                    <li>Progress tracking over time</li>
+                    <li>Personalized recommendations</li>
+                    <li>Export options (PDF, CSV)</li>
+                    <li>Goal setting and monitoring</li>
+                </ul>
+                <a href="detailed-reports-demo.html" class="demo-btn" target="_blank">
+                    ▶️ Launch Reports Demo
+                </a>
+            </div>
+        </div>
+
+        <div class="footer fade-in">
+            <p>
+                <strong>EloquentAI</strong> - Transforming communication through AI-powered analysis and insights.<br>
+                Experience the future of presentation coaching and public speaking improvement.
+            </p>
+            <div style="margin-top: 15px;">
+                <a href="#" class="demo-btn" style="margin-right: 10px;">🚀 Get Started</a>
+                <a href="#" class="demo-btn" style="background: linear-gradient(45deg, #667eea, #764ba2);">📧 Contact Us</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add fade-in animation to elements
+        function addFadeInAnimation() {
+            const elements = document.querySelectorAll('.fade-in');
+            elements.forEach((element, index) => {
+                element.style.animationDelay = (index * 0.1) + 's';
+            });
+        }
+
+        // Initialize animations
+        window.addEventListener('load', addFadeInAnimation);
+
+        // Add hover effects to demo cards
+        document.querySelectorAll('.demo-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html> 

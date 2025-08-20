@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Analysis Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow: hidden;
+        }
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin: 10px 0 0 0;
+        }
+        .demo-section {
+            margin-bottom: 30px;
+        }
+        .waveform {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .waveform-canvas {
+            width: 100%;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            position: relative;
+        }
+        .waveform-bar {
+            position: absolute;
+            bottom: 0;
+            background: linear-gradient(to top, #4facfe, #00f2fe);
+            border-radius: 2px 2px 0 0;
+            animation: wave 1.5s ease-in-out infinite;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .transcription {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .transcription-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin: 0;
+        }
+        .highlight {
+            background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .status {
+            text-align: center;
+            font-size: 1.1em;
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        @keyframes wave {
+            0%, 100% { height: 20px; }
+            50% { height: 80px; }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            border-radius: 3px;
+            animation: progress 3s ease-in-out infinite;
+        }
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="header">
+            <h1>🎤 Speech Analysis Demo</h1>
+            <p>Real-time AI-powered speech recognition and analysis</p>
+        </div>
+
+        <div class="demo-section">
+            <div class="status pulse">
+                🔴 Recording in progress... Analyzing speech patterns
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+
+            <div class="waveform">
+                <h3>Live Audio Waveform</h3>
+                <div class="waveform-canvas" id="waveform">
+                    <!-- Dynamic waveform bars will be generated here -->
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">95%</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">1.2s</div>
+                    <div class="metric-label">Processing Time</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">English</div>
+                    <div class="metric-label">Language Detected</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">Clear</div>
+                    <div class="metric-label">Clarity Score</div>
+                </div>
+            </div>
+
+            <div class="transcription">
+                <h3>📝 Live Transcription</h3>
+                <p class="transcription-text">
+                    "Hello everyone, welcome to our <span class="highlight">presentation</span> today. 
+                    I'm excited to share with you our latest <span class="highlight">innovations</span> 
+                    in artificial intelligence and machine learning. As you can see, our platform 
+                    provides <span class="highlight">real-time analysis</span> of speech patterns, 
+                    helping speakers improve their communication skills..."
+                </p>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">145</div>
+                    <div class="metric-label">Words Per Minute</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">3</div>
+                    <div class="metric-label">Filler Words</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">8.5/10</div>
+                    <div class="metric-label">Confidence Score</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">Excellent</div>
+                    <div class="metric-label">Overall Rating</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="startDemo()">▶️ Start Demo</button>
+            <button class="btn" onclick="pauseDemo()">⏸️ Pause</button>
+            <button class="btn" onclick="resetDemo()">🔄 Reset</button>
+        </div>
+    </div>
+
+    <script>
+        // Generate waveform bars
+        function generateWaveform() {
+            const waveform = document.getElementById('waveform');
+            waveform.innerHTML = '';
+            
+            for (let i = 0; i < 50; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'waveform-bar';
+                bar.style.left = (i * 2) + '%';
+                bar.style.width = '1.5%';
+                bar.style.height = Math.random() * 60 + 20 + 'px';
+                bar.style.animationDelay = (i * 0.1) + 's';
+                waveform.appendChild(bar);
+            }
+        }
+
+        // Initialize demo
+        function initDemo() {
+            generateWaveform();
+            
+            // Simulate real-time updates
+            setInterval(() => {
+                const bars = document.querySelectorAll('.waveform-bar');
+                bars.forEach(bar => {
+                    bar.style.height = Math.random() * 60 + 20 + 'px';
+                });
+            }, 2000);
+        }
+
+        function startDemo() {
+            document.querySelector('.status').textContent = '🔴 Recording in progress... Analyzing speech patterns';
+            document.querySelector('.status').classList.add('pulse');
+        }
+
+        function pauseDemo() {
+            document.querySelector('.status').textContent = '⏸️ Analysis paused';
+            document.querySelector('.status').classList.remove('pulse');
+        }
+
+        function resetDemo() {
+            document.querySelector('.status').textContent = '🔄 Ready to start analysis';
+            document.querySelector('.status').classList.remove('pulse');
+            generateWaveform();
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initDemo);
+    </script>
+</body>
+</html> 

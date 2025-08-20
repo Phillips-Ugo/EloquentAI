@@ -1,0 +1,29 @@
+# FastAPI and web framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Audio processing
+librosa==0.10.1
+soundfile==0.12.1
+numpy==1.24.3
+scipy==1.11.4
+
+# Speech recognition
+openai-whisper==20231117
+
+# NLP and text processing
+spacy==3.7.2
+transformers==4.35.2
+torch==2.1.1
+torchaudio==2.1.1
+
+# Utilities
+pydantic==2.5.0
+python-dotenv==1.0.0
+requests==2.31.0
+aiofiles==23.2.1
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1 
