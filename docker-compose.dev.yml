@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Development version with hot reload
+  eloquent-ai-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: eloquent-ai-dev
+    ports:
+      - "5001:5001"
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5001
+      - DATABASE_PATH=/app/database/eloquent_ai.db
+      - UPLOAD_DIR=/app/uploads
+      - FRONTEND_URL=http://localhost:3000
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/client/node_modules
+    networks:
+      - eloquent-dev-network
+    restart: unless-stopped
+    depends_on:
+      - redis-dev
+    command: npm run dev
+
+  # Redis for development
+  redis-dev:
+    image: redis:7-alpine
+    container_name: eloquent-ai-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    networks:
+      - eloquent-dev-network
+    restart: unless-stopped
+
+  # Development database with admin interface
+  adminer:
+    image: adminer:latest
+    container_name: eloquent-ai-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - eloquent-dev-network
+    restart: unless-stopped
+
+volumes:
+  redis-dev-data:
+
+networks:
+  eloquent-dev-network:
+    driver: bridge

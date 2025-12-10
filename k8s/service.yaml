@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eloquent-ai-service
+  namespace: eloquent-ai
+  labels:
+    app: eloquent-ai
+spec:
+  selector:
+    app: eloquent-ai
+  ports:
+  - name: http
+    port: 5001
+    targetPort: 5001
+    protocol: TCP
+  - name: frontend
+    port: 3000
+    targetPort: 3000
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: eloquent-ai
+  labels:
+    app: redis
+spec:
+  selector:
+    app: redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+    protocol: TCP
+  type: ClusterIP

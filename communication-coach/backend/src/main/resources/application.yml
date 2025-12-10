@@ -1,0 +1,65 @@
+spring:
+  application:
+    name: eloquent-ai-backend
+  
+  # Database Configuration
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/eloquent_ai}
+    username: ${SPRING_DATASOURCE_USERNAME:eloquent_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:eloquent_password}
+    driver-class-name: org.postgresql.Driver
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  # File Upload Configuration
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      enabled: true
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# Microservice URLs
+app:
+  services:
+    speech:
+      url: ${SPEECH_SERVICE_URL:http://localhost:8001}
+    video:
+      url: ${VIDEO_SERVICE_URL:http://localhost:8002}
+  
+  # File Storage Configuration
+  upload:
+    directory: ${UPLOAD_DIR:./uploads}
+    allowed-audio-types: mp3,wav,m4a,flac
+    allowed-video-types: mp4,avi,mov,wmv
+
+# Logging Configuration
+logging:
+  level:
+    com.eloquentai: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# API Documentation
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method 

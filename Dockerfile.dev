@@ -1,0 +1,35 @@
+# Development Dockerfile for Eloquent AI
+FROM node:18-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    ffmpeg \
+    curl \
+    bash \
+    sqlite
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY client/package*.json ./client/
+
+# Install all dependencies (including dev dependencies)
+RUN npm install && \
+    cd client && npm install
+
+# Copy source code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/uploads /app/database /app/logs
+
+# Expose ports
+EXPOSE 5001 3000
+
+# Start development server
+CMD ["npm", "run", "dev"]

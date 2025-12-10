@@ -1,0 +1,37 @@
+{
+  "name": "eloquent-ai-performance-tests",
+  "version": "1.0.0",
+  "description": "Performance testing suite for Eloquent AI",
+  "main": "index.js",
+  "scripts": {
+    "test:benchmark": "k6 run --env BASE_URL=http://localhost:5001 tests/performance/benchmark.js",
+    "test:load": "k6 run --env BASE_URL=http://localhost:5001 tests/performance/load-test.js",
+    "test:stress": "k6 run --env BASE_URL=http://localhost:5001 tests/performance/stress-test.js",
+    "test:spike": "k6 run --env BASE_URL=http://localhost:5001 tests/performance/spike-test.js",
+    "test:websocket": "k6 run --env BASE_URL=ws://localhost:5001 tests/performance/websocket-test.js",
+    "test:all": "npm run test:benchmark && npm run test:load && npm run test:stress && npm run test:spike && npm run test:websocket",
+    "test:staging": "k6 run --env BASE_URL=https://staging.eloquentai.com tests/performance/benchmark.js",
+    "test:production": "k6 run --env BASE_URL=https://eloquentai.com tests/performance/benchmark.js",
+    "report": "node scripts/generate-report.js",
+    "install:k6": "npm run install:k6:linux || npm run install:k6:macos || npm run install:k6:windows",
+    "install:k6:linux": "curl -s https://dl.k6.io/key.gpg | sudo apt-key add - && echo 'deb https://dl.k6.io/deb stable main' | sudo tee /etc/apt/sources.list.d/k6.list && sudo apt-get update && sudo apt-get install k6",
+    "install:k6:macos": "brew install k6",
+    "install:k6:windows": "choco install k6"
+  },
+  "keywords": [
+    "performance",
+    "testing",
+    "k6",
+    "load-testing",
+    "stress-testing",
+    "benchmarking"
+  ],
+  "author": "Eloquent AI Team",
+  "license": "MIT",
+  "devDependencies": {
+    "k6": "^0.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
