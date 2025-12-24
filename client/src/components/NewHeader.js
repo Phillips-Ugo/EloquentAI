@@ -5,7 +5,7 @@ import {
   Menu, X, ChevronDown, Sun, Moon, ArrowRight,
   Video, Upload, BarChart3, DollarSign
 } from 'lucide-react';
-import { LogoWordmark } from './Logo';
+// Logo removed - using text instead
 
 const NewHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,7 +50,9 @@ const NewHeader = () => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2 group">
-              <LogoWordmark className="h-8 text-gray-900" />
+              <span className="text-xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+                Eloquent AI
+              </span>
             </Link>
 
             {/* Desktop Navigation */}

@@ -120,6 +120,18 @@ const AdvancedRealTimeAnalysis = () => {
   const isAnalyzingRef = useRef(false);
   const sessionStartedRef = useRef(false);
 
+  // CRITICAL: Synchronize refs with state - use wrapper functions to update both simultaneously
+  // Define these early so they can be used in other callbacks
+  const setIsAnalyzingSync = useCallback((value) => {
+    setIsAnalyzing(value);
+    isAnalyzingRef.current = value;
+  }, []);
+
+  const setSessionStartedSync = useCallback((value) => {
+    setSessionStarted(value);
+    sessionStartedRef.current = value;
+  }, []);
+
   // Initialize MediaPipe PoseLandmarker
   useEffect(() => {
     const createPoseLandmarker = async () => {
@@ -151,7 +163,7 @@ const AdvancedRealTimeAnalysis = () => {
   const maxReconnectAttempts = 5;
   const reconnectDelay = 1000; // Start with 1 second
 
-  // Handle WebSocket messages - defined first
+  // Handle WebSocket messages - memoized with empty deps, use functional updates for state
   const handleWebSocketMessage = useCallback((data) => {
     switch (data.type) {
       case 'speech_metrics':
@@ -174,14 +186,14 @@ const AdvancedRealTimeAnalysis = () => {
       default:
         console.log('📨 Received message:', data);
     }
-  }, []);
+  }, []); // Empty deps - use functional updates for state
 
-  // Send WebSocket message with retry logic
+  // Send WebSocket message with retry logic - use ref to check session state
   const sendMessage = useCallback((message) => {
     if (!wsRef.current) {
       // Don't spam warnings if WebSocket isn't initialized yet
-      if (sessionStarted) {
-        console.warn('⚠️ WebSocket not initialized');
+      if (sessionStartedRef.current) {
+      console.warn('⚠️ WebSocket not initialized');
       }
       return false;
     }
@@ -196,13 +208,13 @@ const AdvancedRealTimeAnalysis = () => {
       }
     } else {
       // Only warn if we're actually trying to send during an active session
-      if (sessionStarted && wsRef.current.readyState !== WebSocket.CONNECTING) {
-        console.warn('⚠️ WebSocket not open, state:', wsRef.current.readyState);
+      if (sessionStartedRef.current && wsRef.current.readyState !== WebSocket.CONNECTING) {
+      console.warn('⚠️ WebSocket not open, state:', wsRef.current.readyState);
       }
       // Queue message for when connection is restored
       return false;
     }
-  }, [sessionStarted]);
+  }, []); // Empty deps - use refs to check state
 
   // Generate session ID
   const generateSessionId = () => {
@@ -210,8 +222,9 @@ const AdvancedRealTimeAnalysis = () => {
   };
 
   // Initialize WebSocket connection with reconnection logic
+  // Use ref to check session state to avoid dependency issues
   useEffect(() => {
-    if (!sessionStarted) {
+    if (!sessionStartedRef.current) {
       // Clean up if session stopped
       if (wsRef.current) {
         wsRef.current.close();
@@ -226,7 +239,7 @@ const AdvancedRealTimeAnalysis = () => {
       return;
     }
 
-    const connectWebSocket = () => {
+    const connectWebSocket = async () => {
       let connectionTimeout = null;
       
       try {
@@ -243,6 +256,20 @@ const AdvancedRealTimeAnalysis = () => {
         const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:5001/ws';
         console.log(`🔌 Connecting to WebSocket: ${wsUrl}`);
         console.log(`🔌 Session started: ${sessionStarted}`);
+        
+        // Check server health before attempting WebSocket connection (non-blocking)
+        const healthCheckUrl = wsUrl.replace('ws://', 'http://').replace('/ws', '/api/health');
+        fetch(healthCheckUrl)
+          .then(response => {
+            if (response.ok) {
+              console.log('✅ Server health check passed');
+            } else {
+              console.warn('⚠️ Server health check returned non-OK status');
+            }
+          })
+          .catch(() => {
+            console.warn('⚠️ Server health check failed - server may not be running');
+          });
         
         wsRef.current = new WebSocket(wsUrl);
         
@@ -317,7 +344,7 @@ const AdvancedRealTimeAnalysis = () => {
             
             reconnectTimeoutRef.current = setTimeout(() => {
               if (sessionStartedRef.current) {
-                connectWebSocket();
+              connectWebSocket();
               }
             }, delay);
           } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
@@ -326,10 +353,10 @@ const AdvancedRealTimeAnalysis = () => {
               const hasError = prev.some(f => f.message && f.message.includes('Lost connection to server'));
               if (hasError) return prev;
               return [...prev, {
-                type: 'error',
-                message: 'Lost connection to server. Please refresh the page.',
-                priority: 'high',
-                timestamp: Date.now()
+              type: 'error',
+              message: 'Lost connection to server. Please refresh the page.',
+              priority: 'high',
+              timestamp: Date.now()
               }];
             });
           }
@@ -337,23 +364,35 @@ const AdvancedRealTimeAnalysis = () => {
         
         wsRef.current.onerror = (error) => {
           // Only log error if we're actually trying to connect
-          if (sessionStarted) {
-            console.error('❌ WebSocket error:', error);
-            console.error('WebSocket state:', wsRef.current?.readyState);
-            console.error('WebSocket URL:', wsUrl);
-            setWsConnected(false);
+          if (sessionStartedRef.current) {
+            const wsState = wsRef.current?.readyState;
+            const stateNames = ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'];
+            const stateName = stateNames[wsState] || 'UNKNOWN';
             
-            // Only show error once to avoid spam
-            setLiveFeedback(prev => {
-              const hasError = prev.some(f => f.message && f.message.includes('WebSocket connection error'));
-              if (hasError) return prev;
-              return [...prev, {
-                type: 'error',
-                message: 'WebSocket connection error. Please ensure the server is running on port 5001.',
-                priority: 'high',
-                timestamp: Date.now()
-              }];
-            });
+          console.error('❌ WebSocket error:', error);
+            console.error('WebSocket state:', wsState, `(${stateName})`);
+            console.error('WebSocket URL:', wsUrl);
+            
+          setWsConnected(false);
+            
+            // Check if server is reachable (non-blocking)
+            const serverUrl = wsUrl.replace('ws://', 'http://').replace('/ws', '/api/health');
+            fetch(serverUrl)
+              .then(response => {
+                if (response.ok) {
+                  console.log('✅ Server is reachable, WebSocket issue may be temporary - will retry');
+                } else {
+                  console.warn('⚠️ Server responded but with error status:', response.status);
+                }
+              })
+              .catch(() => {
+                console.error('❌ Server appears to be unreachable. Is the server running on port 5001?');
+                // Don't show error message here - let the reconnection logic handle it
+                // The onclose handler will show appropriate messages
+              });
+            
+            // Don't show error message here - the onclose handler will handle reconnection
+            // and show appropriate error messages if reconnection fails
           }
         };
       } catch (error) {
@@ -539,7 +578,7 @@ const AdvancedRealTimeAnalysis = () => {
       // Just ensure it's configured correctly and playing
       if (video.srcObject !== stream) {
         // Only set if not already set (shouldn't happen, but safety check)
-        video.srcObject = stream;
+      video.srcObject = stream;
       }
       
       // Ensure video element properties are set
@@ -723,7 +762,7 @@ const AdvancedRealTimeAnalysis = () => {
               attempts++;
               if (videoTrack.readyState === 'live') {
                 clearInterval(checkTrack);
-                video.play().catch(err => {
+      video.play().catch(err => {
                   console.warn('⚠️ Failed to play after track became live:', err);
                 });
               } else if (attempts > 20) {
@@ -747,7 +786,7 @@ const AdvancedRealTimeAnalysis = () => {
             paused: video.paused
           });
         } catch (err) {
-          console.error('❌ Failed to play video:', err);
+        console.error('❌ Failed to play video:', err);
           // Try again after a short delay (autoplay policy might block it)
           setTimeout(() => {
             if (video.srcObject && !video.paused) {
@@ -755,13 +794,13 @@ const AdvancedRealTimeAnalysis = () => {
             }
             video.play().catch(playErr => {
               console.error('❌ Failed to play video on retry:', playErr);
-              setLiveFeedback(prev => [...prev, {
-                type: 'error',
+        setLiveFeedback(prev => [...prev, {
+          type: 'error',
                 message: 'Failed to start video playback. Please click to interact with the page first.',
-                priority: 'high',
-                timestamp: Date.now()
-              }]);
-            });
+          priority: 'high',
+          timestamp: Date.now()
+        }]);
+      });
           }, 100);
         }
       };
@@ -803,45 +842,66 @@ const AdvancedRealTimeAnalysis = () => {
         if (videoTrack) {
           // CRITICAL: If track is live, ensure it stays active
           if (videoTrack.readyState === 'live') {
-            // Ensure video is playing (browser requirement for keeping stream active)
-            if (video.paused || video.ended) {
-              video.play().catch(err => {
-                console.warn('⚠️ Keep-alive play failed:', err);
-              });
+            // CRITICAL: Continuously access track properties to keep it "active"
+            // This prevents the browser from thinking the track is unused
+            const _enabled = videoTrack.enabled;
+            const _readyState = videoTrack.readyState;
+            const _muted = videoTrack.muted;
+            try {
+              const _settings = videoTrack.getSettings();
+            } catch (e) {
+              // Settings might not be available, that's okay
             }
             
             // Ensure track is enabled - do this aggressively
             if (!videoTrack.enabled) {
               videoTrack.enabled = true;
-              console.log('🔄 Re-enabled video track');
+            }
+            
+            // Ensure video is playing (browser requirement for keeping stream active)
+            if (video.paused || video.ended) {
+              video.play().catch(() => {
+                // Silently fail - might be in transition
+              });
+            }
+            
+            // CRITICAL: Access video properties to keep it active
+            const _videoWidth = video.videoWidth;
+            const _videoHeight = video.videoHeight;
+            const _videoReadyState = video.readyState;
+            const _videoCurrentTime = video.currentTime;
+            
+            // Ensure video is visible and not hidden
+            if (video.style.display === 'none' || video.style.visibility === 'hidden') {
+              video.style.display = 'block';
+              video.style.visibility = 'visible';
+              video.style.opacity = '1';
             }
             
             // Draw a frame to canvas to keep the stream actively consumed
             // This is critical - the browser stops tracks that aren't being consumed
-            if (canvasRef.current && video.videoWidth > 0 && video.videoHeight > 0) {
+            if (canvasRef.current) {
               try {
                 const ctx = canvasRef.current.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvasRef.current.width, canvasRef.current.height);
+                // Only draw if video has dimensions
+                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                  ctx.drawImage(video, 0, 0, 
+                    canvasRef.current.width || video.videoWidth, 
+                    canvasRef.current.height || video.videoHeight);
+                } else {
+                  // Even if no dimensions, access the video to keep it active
+                  const _ = video.videoWidth + video.videoHeight;
+                }
               } catch (err) {
-                // Ignore canvas errors - video might not be ready yet
+                // Ignore canvas errors - but still access video properties
+                const _ = video.videoWidth + video.videoHeight;
               }
             }
           } else if (videoTrack.readyState === 'ended') {
-            // Track has ended - this is the problem we're trying to prevent
-            console.error('❌ Video track ended despite keep-alive efforts');
-            if (isAnalyzingRef.current) {
-              setLiveFeedback(prev => {
-                const hasError = prev.some(f => f.message && f.message.includes('Video track ended'));
-                if (hasError) return prev;
-                return [...prev, {
-                  type: 'error',
-                  message: 'Video track ended unexpectedly. This may be due to browser resource limits or another application using the camera.',
-                  priority: 'high',
-                  timestamp: Date.now()
-                }];
-              });
-            }
-            // Stop the keep-alive loops if track is ended
+            // Track has ended - trigger recovery immediately
+            console.error('❌ Video track ended despite keep-alive efforts - triggering recovery');
+            
+            // Stop the keep-alive loops
             if (keepAliveFrameId) {
               cancelAnimationFrame(keepAliveFrameId);
               keepAliveFrameId = null;
@@ -850,6 +910,14 @@ const AdvancedRealTimeAnalysis = () => {
               clearInterval(keepAliveIntervalId);
               keepAliveIntervalId = null;
             }
+            
+            // Trigger recovery by dispatching the ended event
+            // This will use the existing recovery mechanism
+            if (isAnalyzingRef.current && sessionStartedRef.current) {
+              // Dispatch ended event to trigger recovery
+              videoTrack.dispatchEvent(new Event('ended'));
+            }
+            
             return;
           }
         }
@@ -914,8 +982,36 @@ const AdvancedRealTimeAnalysis = () => {
       };
       
       // Start both keep-alive mechanisms immediately
-      keepVideoActive();
-      keepAliveIntervalId = setInterval(aggressiveKeepAlive, 100); // Check every 100ms
+      // Start keep-alive immediately and aggressively
+      keepVideoActive(); // Start requestAnimationFrame loop immediately
+      keepAliveIntervalId = setInterval(aggressiveKeepAlive, 50); // Check every 50ms (more aggressive)
+      
+      // Also start an even more frequent check for critical properties (every 16ms ~60fps)
+      const criticalKeepAlive = setInterval(() => {
+        if (!isAnalyzingRef.current || !videoRef.current || !videoRef.current.srcObject) {
+          clearInterval(criticalKeepAlive);
+          return;
+        }
+        
+        const video = videoRef.current;
+        const stream = video.srcObject;
+        const videoTrack = stream?.getVideoTracks()?.[0];
+        
+        if (videoTrack && videoTrack.readyState === 'live') {
+          // Just access properties to keep track active - minimal overhead
+          const _ = videoTrack.enabled + videoTrack.readyState + video.videoWidth + video.videoHeight;
+          
+          // Ensure playing
+          if (video.paused) {
+            video.play().catch(() => {});
+          }
+        }
+      }, 16); // ~60fps - very aggressive
+      
+      // Store for cleanup
+      if (video.dataset) {
+        video.dataset.criticalKeepAlive = criticalKeepAlive;
+      }
       
       // Store for cleanup
       if (video.dataset) {
@@ -935,6 +1031,34 @@ const AdvancedRealTimeAnalysis = () => {
     }
   }, [isAnalyzing]);
 
+  // Check camera permissions before attempting access
+  const checkCameraPermissions = useCallback(async () => {
+    try {
+      // Check if permissions API is available
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const cameraPermission = await navigator.permissions.query({ name: 'camera' });
+          console.log('📷 Camera permission status:', cameraPermission.state);
+          
+          if (cameraPermission.state === 'denied') {
+            throw new Error('Camera permission denied. Please allow camera access in your browser settings and refresh the page.');
+          }
+          
+          // Listen for permission changes
+          cameraPermission.onchange = () => {
+            console.log('📷 Camera permission changed to:', cameraPermission.state);
+          };
+        } catch (permError) {
+          // Permissions API might not be fully supported, continue anyway
+          console.warn('⚠️ Could not check camera permissions:', permError.message);
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Permission check failed:', error);
+      // Continue anyway - some browsers don't support permissions API
+    }
+  }, []);
+
   // Initialize media streams with proper error handling
   const initializeMediaStreams = useCallback(async () => {
     try {
@@ -943,8 +1067,54 @@ const AdvancedRealTimeAnalysis = () => {
         throw new Error('MediaDevices API is not supported in this browser');
       }
 
-      // Build constraints based on enabled features
-      const constraints = {
+      // Check permissions first
+      await checkCameraPermissions();
+
+      // CRITICAL: Clean up any existing streams first to prevent camera lock
+      if (videoRef.current && videoRef.current.srcObject) {
+        const oldStream = videoRef.current.srcObject;
+        console.log('🧹 Cleaning up existing stream before requesting new one...');
+        oldStream.getTracks().forEach(track => {
+          if (track.readyState !== 'ended') {
+            track.stop();
+            console.log(`✅ Stopped existing ${track.kind} track`);
+          }
+        });
+        videoRef.current.srcObject = null;
+        // Wait a moment for the camera to release
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Progressive constraint sets - start with minimal for faster access, upgrade if successful
+      // This approach is more reliable: get camera working first, then upgrade quality
+      const constraintSets = [
+        // Set 1: Minimal constraints (fastest, most compatible) - START HERE
+        {
+          audio: audioEnabled ? true : false,
+          video: videoEnabled ? true : false  // No constraints = fastest access
+        },
+        // Set 2: Basic constraints (add facingMode)
+        {
+          audio: audioEnabled ? true : false,
+          video: videoEnabled ? {
+            facingMode: 'user'
+          } : false
+        },
+        // Set 3: Medium constraints (moderate quality)
+        {
+          audio: audioEnabled ? {
+            echoCancellation: true,
+            noiseSuppression: true
+          } : false,
+          video: videoEnabled ? {
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 },
+            frameRate: { ideal: 24, min: 15 },
+            facingMode: 'user'
+          } : false
+        },
+        // Set 4: Ideal constraints (high quality) - try to upgrade after success
+        {
         audio: audioEnabled ? {
           echoCancellation: true,
           noiseSuppression: true,
@@ -957,27 +1127,136 @@ const AdvancedRealTimeAnalysis = () => {
           frameRate: { ideal: 30, min: 15 },
           facingMode: 'user'
         } : false
-      };
+        }
+      ];
 
-      // Request media access
+      // Request media access with timeout wrapper and retry logic
       let stream;
+      const maxInitialAttempts = 3;
+      let initialAttempts = 0;
+      
+      // Wrap getUserMedia with a timeout to provide better error messages
+      const getUserMediaWithTimeout = (constraints, timeout = 45000) => {
+        return Promise.race([
+          navigator.mediaDevices.getUserMedia(constraints),
+          new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new DOMException('Timeout starting video source', 'TimeoutError'));
+            }, timeout);
+          })
+        ]);
+      };
+      
+      // No initial wait - try immediately for faster startup
+      // If camera is busy, the retry logic will handle it
+      
+      // Check camera availability first
       try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        if (videoEnabled && videoDevices.length === 0) {
+          throw new Error('No video devices available');
+        }
+        console.log(`✅ Found ${videoDevices.length} video device(s) available`);
+      } catch (enumError) {
+        console.warn('⚠️ Cannot enumerate devices:', enumError.message);
+        // Continue anyway - enumeration might fail but camera might still work
+      }
+      
+      // Retry logic for initial access with progressive constraint simplification
+      while (initialAttempts < maxInitialAttempts) {
+        initialAttempts++;
+        
+        // Select constraint set based on attempt number
+        // Attempt 1: Minimal (fastest), Attempt 2: Basic, Attempt 3: Medium
+        // This reverse approach gets camera working first, then upgrades quality
+        const constraintIndex = Math.min(initialAttempts - 1, constraintSets.length - 1);
+        const constraints = constraintSets[constraintIndex];
+        const constraintNames = ['minimal', 'basic', 'medium', 'ideal'];
+        const constraintName = constraintNames[constraintIndex] || 'minimal';
+        
+        try {
+          if (initialAttempts > 1) {
+            const waitTime = 3000 * initialAttempts; // 3s, 6s - shorter waits since we start minimal
+            console.log(`⏳ Retry attempt ${initialAttempts}/${maxInitialAttempts} - waiting ${waitTime}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+          
+          console.log(`📹 Requesting media access (attempt ${initialAttempts}/${maxInitialAttempts}, ${constraintName} constraints, 30s timeout)...`);
+          stream = await getUserMediaWithTimeout(constraints, 30000); // 30 second timeout (shorter since minimal is faster)
+          console.log(`✅ Media access granted with ${constraintName} constraints`);
+          
+          // If we got minimal/basic constraints, try to upgrade to better quality
+          if (constraintIndex < constraintSets.length - 1 && stream) {
+            console.log('🔄 Attempting to upgrade to higher quality constraints...');
+            try {
+              const upgradeConstraints = constraintSets[constraintIndex + 1];
+              const upgradedStream = await getUserMediaWithTimeout(upgradeConstraints, 20000);
+              
+              // Stop old stream and use upgraded one
+              stream.getTracks().forEach(t => t.stop());
+              stream = upgradedStream;
+              console.log(`✅ Upgraded to ${constraintNames[constraintIndex + 1]} constraints`);
+            } catch (upgradeError) {
+              console.log(`⚠️ Could not upgrade constraints, keeping ${constraintName} quality`);
+              // Keep the working stream even if upgrade fails
+            }
+          }
+          
+          break; // Success, exit retry loop
       } catch (permissionError) {
-        if (permissionError.name === 'NotAllowedError') {
+          console.error(`❌ Media access error (attempt ${initialAttempts}/${maxInitialAttempts}, ${constraintName} constraints):`, permissionError);
+          
+          // Don't retry for permission errors - these won't change
+          if (permissionError.name === 'NotAllowedError' || permissionError.name === 'PermissionDeniedError') {
           throw new Error('Camera/microphone permission denied. Please allow access in your browser settings.');
-        } else if (permissionError.name === 'NotFoundError') {
+          } else if (permissionError.name === 'NotFoundError' || permissionError.name === 'DevicesNotFoundError') {
           throw new Error('No camera or microphone found. Please connect a device and try again.');
-        } else if (permissionError.name === 'NotReadableError') {
-          throw new Error('Camera or microphone is already in use by another application.');
+          }
+          
+          // For timeout or locked camera errors, retry if we have attempts left
+          const isTimeoutError = permissionError.name === 'TimeoutError' || 
+                                 permissionError.name === 'AbortError' ||
+                                 permissionError.message.includes('Timeout');
+          const isCameraLocked = permissionError.name === 'NotReadableError' || 
+                                permissionError.name === 'TrackStartError' ||
+                                permissionError.message.includes('Could not start video source');
+          
+          if (isTimeoutError || isCameraLocked) {
+            if (initialAttempts < maxInitialAttempts) {
+              console.warn(`⚠️ Camera ${isTimeoutError ? 'timed out' : 'locked'} with ${constraintName} constraints, will try ${constraintIndex < constraintSets.length - 1 ? 'simpler' : 'again with'} constraints...`);
+              continue; // Retry with next constraint set
         } else {
-          throw new Error(`Failed to access media devices: ${permissionError.message}`);
+              // All attempts exhausted - try one final time with absolute minimal constraints
+              console.log('🔄 All standard attempts failed, trying absolute minimal constraints as last resort...');
+              try {
+                const minimalConstraints = {
+                  audio: audioEnabled ? true : false,
+                  video: videoEnabled ? true : false // No constraints at all
+                };
+                console.log('📹 Final attempt with absolute minimal constraints (60s timeout)...');
+                stream = await getUserMediaWithTimeout(minimalConstraints, 60000); // 60 second timeout for final attempt
+                console.log('✅ Media access granted with minimal constraints');
+                break; // Success!
+              } catch (finalError) {
+                // Final attempt also failed
+                if (isTimeoutError) {
+                  throw new Error('Camera access timed out after multiple attempts with progressively simpler settings. The camera may be busy, locked, or experiencing hardware issues. Please: 1) Close all other applications using the camera, 2) Wait 10-15 seconds, 3) Restart your browser, and 4) Try again.');
+                } else {
+                  throw new Error('Camera is locked or in use by another application. Please close all other applications using the camera (including other browser tabs), wait a few seconds, and try again.');
+                }
+              }
+            }
+          } else {
+            // Other errors - throw immediately
+            throw new Error(`Failed to access media devices: ${permissionError.message || permissionError.name}`);
+          }
         }
       }
       
       // Verify stream was obtained
       if (!stream) {
-        throw new Error('Failed to obtain media stream');
+        throw new Error('Failed to access media devices after multiple attempts. Please check your camera permissions and ensure no other applications are using the camera.');
       }
 
       // Ensure all tracks are enabled and active
@@ -1154,28 +1433,47 @@ const AdvancedRealTimeAnalysis = () => {
           const currentIsAnalyzing = isAnalyzingRef.current;
           const currentSessionStarted = sessionStartedRef.current;
           
+          // Check if page is hidden - tracks often end when tab is in background
+          const isPageHidden = document.hidden || document.visibilityState === 'hidden';
+          
           console.log(`Track ended: ${track.kind}`, {
             readyState: track.readyState,
             enabled: track.enabled,
             muted: track.muted,
             isAnalyzing: currentIsAnalyzing,
-            sessionStarted: currentSessionStarted
+            sessionStarted: currentSessionStarted,
+            pageHidden: isPageHidden
           });
           
           // Only clear stream if session is actually stopped
           if (!currentSessionStarted && !currentIsAnalyzing) {
             console.log(`✅ Track ${track.kind} ended - session already stopped`);
-            if (track.kind === 'audio') {
-              setAudioStream(null);
-            } else if (track.kind === 'video') {
-              setVideoStream(null);
-            }
+          if (track.kind === 'audio') {
+            setAudioStream(null);
+          } else if (track.kind === 'video') {
+            setVideoStream(null);
+          }
           } else {
             // Track ended unexpectedly - this is a browser/system issue
             console.warn(`⚠️ Track ${track.kind} ended unexpectedly during active session!`, {
               isAnalyzing: currentIsAnalyzing,
-              sessionStarted: currentSessionStarted
+              sessionStarted: currentSessionStarted,
+              pageHidden: isPageHidden
             });
+            
+            // If page is hidden, this is likely due to browser suspending background tabs
+            if (isPageHidden && track.kind === 'video') {
+              console.log('ℹ️ Page is hidden - track ending is likely due to browser suspending background tabs');
+              setLiveFeedback(prev => [...prev, {
+                type: 'info',
+                message: 'Video paused because tab is in background. It will resume when you return to this tab.',
+                priority: 'medium',
+                timestamp: Date.now()
+              }]);
+              // Don't attempt recovery if page is hidden - it will likely fail
+              // The track should resume when the page becomes visible again
+              return;
+            }
             
             if (currentSessionStarted || currentIsAnalyzing) {
               // Try to prevent the track from ending by ensuring video is playing
@@ -1221,8 +1519,80 @@ const AdvancedRealTimeAnalysis = () => {
                   let recoveryAttempts = 0;
                   const maxRecoveryAttempts = 3;
                   
+                  // CRITICAL: Comprehensive cleanup function
+                  const performThoroughCleanup = () => {
+                    console.log('🧹 Performing thorough cleanup...');
+                    
+                    // Stop all keep-alive mechanisms
+                    if (videoRef.current) {
+                      const video = videoRef.current;
+                      
+                      // Clear all intervals and animation frames
+                      if (video.dataset) {
+                        if (video.dataset.keepAliveAnimationFrame) {
+                          cancelAnimationFrame(parseInt(video.dataset.keepAliveAnimationFrame));
+                          delete video.dataset.keepAliveAnimationFrame;
+                        }
+                        if (video.dataset.keepAliveInterval) {
+                          clearInterval(parseInt(video.dataset.keepAliveInterval));
+                          delete video.dataset.keepAliveInterval;
+                        }
+                        if (video.dataset.preventTrackEndInterval) {
+                          clearInterval(parseInt(video.dataset.preventTrackEndInterval));
+                          delete video.dataset.preventTrackEndInterval;
+                        }
+                      }
+                      
+                      // CRITICAL: Stop and clear old stream tracks FIRST (releases camera hardware)
+                      if (video.srcObject) {
+                        const oldStream = video.srcObject;
+                        console.log('🛑 Stopping all tracks from old stream to release camera...');
+                        oldStream.getTracks().forEach(track => {
+                          if (track.readyState !== 'ended') {
+                            track.stop(); // This releases the camera hardware
+                            console.log(`🛑 Stopped ${track.kind} track (readyState: ${track.readyState})`);
+                          }
+                        });
+                        video.srcObject = null;
+                      }
+                      
+                      // Reset video element completely
+                      try {
+                        video.pause();
+                        video.srcObject = null;
+                        video.load(); // Reload to clear any internal state
+                        video.srcObject = null; // Clear again after load
+                      } catch (e) {
+                        console.warn('⚠️ Error resetting video element:', e);
+                      }
+                    }
+                    
+                    // Clean up state references
+                    if (videoStream) {
+                      const oldStream = videoStream;
+                      oldStream.getTracks().forEach(track => {
+                        if (track.readyState !== 'ended') {
+                          track.stop();
+                          console.log(`🛑 Stopped ${track.kind} track from state reference`);
+                        }
+                      });
+                    }
+                    
+                    // Also clean up audio stream if it exists
+                    if (audioStream) {
+                      audioStream.getTracks().forEach(track => {
+                        if (track.readyState !== 'ended') {
+                          track.stop();
+                        }
+                      });
+                    }
+                    
+                    console.log('✅ Cleanup complete - camera should be released');
+                  };
+                  
                   const attemptRecovery = async () => {
                     if (!isAnalyzingRef.current || !sessionStartedRef.current) {
+                      console.log('⏹️ Session stopped, aborting recovery');
                       return; // Session stopped, don't recover
                     }
                     
@@ -1230,18 +1600,20 @@ const AdvancedRealTimeAnalysis = () => {
                     console.log(`🔄 Recovery attempt ${recoveryAttempts}/${maxRecoveryAttempts}...`);
                     
                     try {
-                      // Wait longer between attempts to let camera release
-                      // First attempt waits 2 seconds, subsequent attempts wait longer
-                      const waitTime = recoveryAttempts === 1 ? 2000 : Math.min(2000 * recoveryAttempts, 5000);
-                      if (recoveryAttempts > 1) {
-                        console.log(`⏳ Waiting ${waitTime}ms before recovery attempt ${recoveryAttempts}...`);
-                        await new Promise(resolve => setTimeout(resolve, waitTime));
-                      } else {
-                        // First attempt - wait 2 seconds for camera to release
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                      }
+                      // CRITICAL: Perform thorough cleanup before each attempt
+                      performThoroughCleanup();
+                      
+                      // Wait progressively longer between attempts to let camera fully release
+                      // For NotReadableError (camera locked), we need MUCH longer waits
+                      // Attempt 1: 8s, Attempt 2: 15s, Attempt 3: 25s
+                      // This gives the camera hardware time to fully release
+                      const baseWaitTime = 8000 * recoveryAttempts; // Longer base wait
+                      const waitTime = baseWaitTime + (recoveryAttempts * 2000); // Extra time for each attempt
+                      console.log(`⏳ Waiting ${waitTime}ms for camera to fully release before recovery attempt ${recoveryAttempts}...`);
+                      await new Promise(resolve => setTimeout(resolve, waitTime));
                       
                       // Check if camera is available by trying to enumerate devices first
+                      let cameraAvailable = false;
                       try {
                         const devices = await navigator.mediaDevices.enumerateDevices();
                         const videoDevices = devices.filter(d => d.kind === 'videoinput');
@@ -1249,22 +1621,93 @@ const AdvancedRealTimeAnalysis = () => {
                           throw new Error('No video devices available');
                         }
                         console.log(`✅ Found ${videoDevices.length} video device(s)`);
+                        cameraAvailable = true;
                       } catch (enumError) {
                         console.warn('⚠️ Cannot enumerate devices, camera may be locked:', enumError.message);
+                        // For timeout errors, if enumeration fails, wait even longer
+                        if (recoveryAttempts < maxRecoveryAttempts) {
+                          const extraWait = 5000;
+                          console.log(`⏳ Camera enumeration failed, waiting additional ${extraWait}ms...`);
+                          await new Promise(resolve => setTimeout(resolve, extraWait));
+                        }
                       }
                       
-                      // Request new media stream with more lenient constraints
-                      const constraints = {
-                        video: {
-                          width: { ideal: 1280, min: 640 },
-                          height: { ideal: 720, min: 480 },
-                          frameRate: { ideal: 30, min: 15 },
-                          facingMode: 'user'
+                      // Progressive constraint sets for recovery - START WITH MINIMAL for fastest recovery
+                      // Same approach as initial access: get camera working first, then upgrade
+                      const recoveryConstraintSets = [
+                        // Set 1: Minimal constraints (fastest, most compatible) - START HERE
+                        {
+                          video: true  // No constraints = fastest access
+                        },
+                        // Set 2: Basic constraints (add facingMode)
+                        {
+                          video: {
+                            facingMode: 'user'
+                          }
+                        },
+                        // Set 3: Medium constraints (moderate quality)
+                        {
+                          video: {
+                            width: { ideal: 640, min: 320 },
+                            height: { ideal: 480, min: 240 },
+                            frameRate: { ideal: 24, min: 15 },
+                            facingMode: 'user'
+                          }
                         }
+                      ];
+                      
+                      // Select constraint set based on recovery attempt
+                      // Attempt 1: Minimal, Attempt 2: Basic, Attempt 3: Medium
+                      const constraintIndex = Math.min(recoveryAttempts - 1, recoveryConstraintSets.length - 1);
+                      const constraints = recoveryConstraintSets[constraintIndex];
+                      const constraintNames = ['minimal', 'basic', 'medium'];
+                      const constraintName = constraintNames[constraintIndex] || 'minimal';
+                      
+                      // Use shorter timeout for recovery since we start with minimal (faster)
+                      // Minimal constraints should succeed quickly, so 30s is usually enough
+                      const timeout = recoveryAttempts === maxRecoveryAttempts ? 45000 : 30000;
+                      const getUserMediaWithTimeout = (constraints, timeout = 45000) => {
+                        return Promise.race([
+                          navigator.mediaDevices.getUserMedia(constraints),
+                          new Promise((_, reject) => {
+                            setTimeout(() => {
+                              reject(new DOMException('Timeout starting video source', 'AbortError'));
+                            }, timeout);
+                          })
+                        ]);
                       };
                       
-                      console.log('📹 Requesting new video stream...');
-                      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+                      console.log(`📹 Requesting new video stream (attempt ${recoveryAttempts}/${maxRecoveryAttempts}, ${constraintName} constraints, ${timeout/1000}s timeout)...`);
+                      let newStream;
+                      
+                      // Show user feedback for recovery attempt
+                      if (recoveryAttempts === 1) {
+                        setLiveFeedback(prev => [...prev, {
+                          type: 'warning',
+                          message: 'Video track ended. Attempting to recover...',
+                          priority: 'high',
+                          timestamp: Date.now()
+                        }]);
+                      }
+                      
+                      newStream = await getUserMediaWithTimeout(constraints, timeout);
+                      
+                      // If we got minimal/basic constraints, try to upgrade to better quality
+                      if (constraintIndex < recoveryConstraintSets.length - 1 && newStream) {
+                        console.log('🔄 Attempting to upgrade recovered stream to higher quality...');
+                        try {
+                          const upgradeConstraints = recoveryConstraintSets[constraintIndex + 1];
+                          const upgradedStream = await getUserMediaWithTimeout(upgradeConstraints, 20000);
+                          
+                          // Stop old stream and use upgraded one
+                          newStream.getTracks().forEach(t => t.stop());
+                          newStream = upgradedStream;
+                          console.log(`✅ Upgraded recovered stream to ${constraintNames[constraintIndex + 1]} quality`);
+                        } catch (upgradeError) {
+                          console.log(`⚠️ Could not upgrade recovered stream, keeping ${constraintName} quality`);
+                          // Keep the working stream even if upgrade fails
+                        }
+                      }
                       
                       // Set up the new stream immediately
                       if (video && newStream.getVideoTracks().length > 0) {
@@ -1314,11 +1757,17 @@ const AdvancedRealTimeAnalysis = () => {
                           
                           console.log('✅ Video stream recovered successfully');
                           setLiveFeedback(prev => {
-                            const hasSuccess = prev.some(f => f.message && f.message.includes('recovered successfully'));
-                            if (hasSuccess) return prev;
-                            return [...prev, {
+                            // Remove any recovery attempt messages and add success message
+                            const filtered = prev.filter(f => 
+                              !f.message || 
+                              (!f.message.includes('recovered successfully') && 
+                               !f.message.includes('Attempting to recover') &&
+                               !f.message.includes('Trying final recovery') &&
+                               !f.message.includes('recovery attempt'))
+                            );
+                            return [...filtered, {
                               type: 'success',
-                              message: 'Video stream recovered successfully',
+                              message: '✅ Video stream recovered successfully! Analysis continues.',
                               priority: 'medium',
                               timestamp: Date.now()
                             }];
@@ -1333,27 +1782,139 @@ const AdvancedRealTimeAnalysis = () => {
                     } catch (recoveryError) {
                       console.error(`❌ Recovery attempt ${recoveryAttempts} failed:`, recoveryError);
                       
-                      // Check if it's a NotReadableError (camera locked)
-                      if (recoveryError.name === 'NotReadableError' || 
-                          recoveryError.message.includes('Could not start video source')) {
-                        console.warn('⚠️ Camera appears to be locked/in use');
+                      // Check if it's a timeout or camera lock error
+                      const isTimeoutError = recoveryError.name === 'AbortError' || 
+                                            recoveryError.name === 'TimeoutError' ||
+                                            recoveryError.message.includes('Timeout') ||
+                                            recoveryError.message.includes('timeout');
+                      const isCameraLocked = recoveryError.name === 'NotReadableError' || 
+                                            recoveryError.message.includes('Could not start video source') ||
+                                            recoveryError.message.includes('NotReadableError');
+                      
+                      if (isTimeoutError || isCameraLocked) {
+                        console.warn(`⚠️ Camera ${isTimeoutError ? 'timed out' : 'appears to be locked/in use'}`);
+                        
+                        // Perform thorough cleanup after failure
+                        performThoroughCleanup();
+                        
+                        // For NotReadableError, wait even longer before retrying
+                        // The camera hardware needs more time to release
+                        if (isCameraLocked && recoveryAttempts < maxRecoveryAttempts) {
+                          const extraWait = 10000; // 10 seconds extra wait for locked camera
+                          console.log(`⏳ Camera is locked, waiting additional ${extraWait}ms for hardware to release...`);
+                          await new Promise(resolve => setTimeout(resolve, extraWait));
+                          
+                          // Perform cleanup again after extra wait
+                          performThoroughCleanup();
+                        }
+                        
+                        // If all standard attempts failed, try one final time with absolute minimal constraints
+                        if (recoveryAttempts === maxRecoveryAttempts && 
+                            isAnalyzingRef.current && 
+                            sessionStartedRef.current) {
+                          console.log('🔄 All standard recovery attempts failed, trying absolute minimal constraints as final fallback...');
+                          setLiveFeedback(prev => [...prev, {
+                            type: 'info',
+                            message: 'Trying final recovery attempt with minimal settings...',
+                            priority: 'medium',
+                            timestamp: Date.now()
+                          }]);
+                          
+                          try {
+                            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s before final attempt
+                            const minimalConstraints = { video: true }; // No constraints at all
+                            console.log('📹 Final recovery attempt with absolute minimal constraints (60s timeout)...');
+                            
+                            // Define timeout wrapper for final attempt
+                            const finalGetUserMediaWithTimeout = (constraints, timeout = 60000) => {
+                              return Promise.race([
+                                navigator.mediaDevices.getUserMedia(constraints),
+                                new Promise((_, reject) => {
+                                  setTimeout(() => {
+                                    reject(new DOMException('Timeout starting video source', 'AbortError'));
+                                  }, timeout);
+                                })
+                              ]);
+                            };
+                            
+                            const finalStream = await finalGetUserMediaWithTimeout(minimalConstraints, 60000);
+                            
+                            // Set up the final recovered stream
+                            if (video && finalStream.getVideoTracks().length > 0) {
+                              const finalVideoTrack = finalStream.getVideoTracks()[0];
+                              if (finalVideoTrack.readyState === 'live') {
+                                // Clean up old keep-alive mechanisms
+                                if (video.dataset) {
+                                  if (video.dataset.keepAliveAnimationFrame) {
+                                    cancelAnimationFrame(parseInt(video.dataset.keepAliveAnimationFrame));
+                                  }
+                                  if (video.dataset.keepAliveInterval) {
+                                    clearInterval(parseInt(video.dataset.keepAliveInterval));
+                                  }
+                                  if (video.dataset.preventTrackEndInterval) {
+                                    clearInterval(parseInt(video.dataset.preventTrackEndInterval));
+                                  }
+                                }
+                                
+                                // Set up video element immediately
+                                video.srcObject = finalStream;
+                                video.muted = true;
+                                video.playsInline = true;
+                                video.autoplay = true;
+                                video.style.display = 'block';
+                                video.style.width = '100%';
+                                video.style.height = '100%';
+                                video.style.objectFit = 'cover';
+                                
+                                video.play().catch(() => {});
+                                setVideoStream(finalStream);
+                                setupVideoAnalysis(finalStream);
+                                
+                                console.log('✅ Video stream recovered successfully with minimal constraints');
+                                setLiveFeedback(prev => {
+                                  const hasSuccess = prev.some(f => f.message && f.message.includes('recovered successfully'));
+                                  if (hasSuccess) return prev;
+                                  return [...prev, {
+                                    type: 'success',
+                                    message: 'Video stream recovered successfully',
+                                    priority: 'medium',
+                                    timestamp: Date.now()
+                                  }];
+                                });
+                                return; // Success with final fallback!
+                              }
+                            }
+                          } catch (finalError) {
+                            console.error('❌ Final recovery attempt with minimal constraints also failed:', finalError);
+                            // Fall through to show error message
+                          }
+                        }
                         
                         if (recoveryAttempts < maxRecoveryAttempts && 
                             isAnalyzingRef.current && 
                             sessionStartedRef.current) {
-                          // Wait longer for camera to release, then retry
-                          const retryDelay = 3000 * recoveryAttempts; // 3s, 6s, 9s
-                          console.log(`⏳ Camera locked, waiting ${retryDelay}ms before retry...`);
+                          // For camera locked errors, wait MUCH longer before retrying
+                          // The camera hardware needs significant time to release
+                          const retryDelay = isCameraLocked
+                            ? 15000 * recoveryAttempts  // 15s, 30s, 45s for locked camera (hardware needs time)
+                            : isTimeoutError 
+                            ? 10000 * recoveryAttempts  // 10s, 20s, 30s for timeouts
+                            : 8000 * recoveryAttempts;   // 8s, 16s, 24s for other errors
+                          console.log(`⏳ Camera ${isTimeoutError ? 'timed out' : isCameraLocked ? 'locked (hardware release needed)' : 'error'}, waiting ${retryDelay}ms before retry ${recoveryAttempts + 1}...`);
                           setTimeout(attemptRecovery, retryDelay);
                         } else {
                           // All recovery attempts failed
-                          console.error('❌ All recovery attempts failed - camera may be in use by another application');
+                          const errorMessage = isTimeoutError 
+                            ? 'Video track ended and recovery failed due to camera timeout. The camera may be busy or locked. Please close other applications using the camera, wait a few seconds, and restart the analysis.'
+                            : 'Video track ended and recovery failed. The camera appears to be in use by another application. Please close other applications using the camera and restart the analysis.';
+                          
+                          console.error('❌ All recovery attempts failed');
                           setLiveFeedback(prev => {
                             const hasError = prev.some(f => f.message && f.message.includes('recovery failed'));
                             if (hasError) return prev;
                             return [...prev, {
                               type: 'error',
-                              message: 'Video track ended and recovery failed. The camera appears to be in use by another application. Please close other applications using the camera and restart the analysis.',
+                              message: errorMessage,
                               priority: 'high',
                               timestamp: Date.now()
                             }];
@@ -1384,7 +1945,8 @@ const AdvancedRealTimeAnalysis = () => {
                   };
                   
                   // Start recovery attempt after initial delay
-                  setTimeout(attemptRecovery, 1000); // Wait 1 second before first attempt
+                  // Wait longer initially to give camera time to fully release
+                  setTimeout(attemptRecovery, 5000); // Wait 5 seconds before first attempt
                   
                   return; // Don't show error yet, wait for recovery attempt
                 }
@@ -1420,7 +1982,7 @@ const AdvancedRealTimeAnalysis = () => {
       }]);
       throw error;
     }
-  }, [audioEnabled, videoEnabled, setupAudioAnalysis, setupVideoAnalysis]);
+  }, [audioEnabled, videoEnabled, setupAudioAnalysis, setupVideoAnalysis, checkCameraPermissions]);
 
   const lastVideoTimeRef = useRef(-1);
   const frameTimestampRef = useRef(0); // MediaPipe requires strictly increasing timestamps
@@ -1430,14 +1992,14 @@ const AdvancedRealTimeAnalysis = () => {
   const frameSkipCountRef = useRef(0);
   
   const predictWebcam = useCallback(async () => {
-    // Check if we should continue analyzing
-    if (!isAnalyzing) {
+    // Check if we should continue analyzing - use ref to avoid stale closures
+    if (!isAnalyzingRef.current) {
       return; // Stop the loop if not analyzing
     }
     
     if (!videoRef.current || !poseLandmarker || !drawingUtils) {
       // If components aren't ready but we're still analyzing, try again
-      if (isAnalyzing) {
+      if (isAnalyzingRef.current) {
         requestAnimationFrame(predictWebcam);
       }
       return;
@@ -1449,7 +2011,7 @@ const AdvancedRealTimeAnalysis = () => {
       
       if (!canvas) {
         console.warn('⚠️ Canvas not available');
-        if (isAnalyzing) {
+        if (isAnalyzingRef.current) {
           requestAnimationFrame(predictWebcam);
         }
         return;
@@ -1458,7 +2020,7 @@ const AdvancedRealTimeAnalysis = () => {
       const context = canvas.getContext('2d');
       if (!context) {
         console.warn('⚠️ Canvas context not available');
-        if (isAnalyzing) {
+        if (isAnalyzingRef.current) {
           requestAnimationFrame(predictWebcam);
         }
         return;
@@ -1466,7 +2028,7 @@ const AdvancedRealTimeAnalysis = () => {
 
       // Check if video is ready and playing
       if (video.readyState < 2) { // HAVE_CURRENT_DATA
-        if (isAnalyzing) {
+        if (isAnalyzingRef.current) {
           requestAnimationFrame(predictWebcam);
         }
         return;
@@ -1474,7 +2036,7 @@ const AdvancedRealTimeAnalysis = () => {
 
       // Ensure video is actually playing
       if (video.paused || video.ended) {
-        if (isAnalyzing) {
+        if (isAnalyzingRef.current) {
           requestAnimationFrame(predictWebcam);
         }
         return;
@@ -1488,7 +2050,7 @@ const AdvancedRealTimeAnalysis = () => {
       if (timeSinceLastFrame < minFrameInterval && lastFrameTimeRef.current > 0) {
         // Skip this frame to maintain proper frame rate and reduce load
         frameSkipCountRef.current++;
-        if (isAnalyzing) {
+        if (isAnalyzingRef.current) {
           requestAnimationFrame(predictWebcam);
         }
         return;
@@ -1516,17 +2078,17 @@ const AdvancedRealTimeAnalysis = () => {
           const shouldDraw = frameSkipCountRef.current % 3 === 0; // Draw every 3rd processed frame
           
           if (shouldDraw) {
-            context.save();
-            context.clearRect(0, 0, canvas.width, canvas.height);
+          context.save();
+          context.clearRect(0, 0, canvas.width, canvas.height);
           }
 
           if (results && results.landmarks && results.landmarks.length > 0) {
             // Draw landmarks only if we're drawing this frame
             if (shouldDraw) {
-              for (const landmark of results.landmarks) {
-                if (drawingUtils && landmark) {
-                  drawingUtils.drawLandmarks(landmark, { color: '#FF0000', lineWidth: 2 });
-                  drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 3 });
+            for (const landmark of results.landmarks) {
+              if (drawingUtils && landmark) {
+                drawingUtils.drawLandmarks(landmark, { color: '#FF0000', lineWidth: 2 });
+                drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 3 });
                 }
               }
             }
@@ -1568,7 +2130,7 @@ const AdvancedRealTimeAnalysis = () => {
           }
 
           if (shouldDraw) {
-            context.restore();
+          context.restore();
           }
           
           frameSkipCountRef.current = 0; // Reset after processing
@@ -1585,7 +2147,7 @@ const AdvancedRealTimeAnalysis = () => {
               priority: 'high',
               timestamp: Date.now()
             }]);
-            setIsAnalyzing(false);
+            setIsAnalyzingSync(false);
             return;
           }
           
@@ -1597,7 +2159,7 @@ const AdvancedRealTimeAnalysis = () => {
         }
       }
 
-      if (isAnalyzing) {
+      if (isAnalyzingRef.current) {
         requestAnimationFrame(predictWebcam);
       }
     } catch (error) {
@@ -1606,18 +2168,17 @@ const AdvancedRealTimeAnalysis = () => {
       
       if (mediaPipeErrorCountRef.current > 10) {
         console.error('❌ Too many errors in predictWebcam, stopping');
-        isAnalyzingRef.current = false;
-        setIsAnalyzing(false);
+        setIsAnalyzingSync(false);
         return;
       }
       
-      if (isAnalyzing) {
+      if (isAnalyzingRef.current) {
         requestAnimationFrame(predictWebcam);
       }
     }
-  }, [isAnalyzing, poseLandmarker, drawingUtils, sendMessage]);
+  }, [poseLandmarker, drawingUtils, sendMessage, setIsAnalyzingSync]);
 
-  // Keep refs in sync with state
+  // Keep refs in sync with state (backup sync for external state changes)
   useEffect(() => {
     isAnalyzingRef.current = isAnalyzing;
   }, [isAnalyzing]);
@@ -1625,6 +2186,49 @@ const AdvancedRealTimeAnalysis = () => {
   useEffect(() => {
     sessionStartedRef.current = sessionStarted;
   }, [sessionStarted]);
+
+  // Handle page visibility changes - recover stream if tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && document.visibilityState === 'visible') {
+        // Page became visible - check if we need to recover the stream
+        if (isAnalyzingRef.current && sessionStartedRef.current && videoRef.current) {
+          const video = videoRef.current;
+          const stream = video.srcObject;
+          
+          if (stream) {
+            const videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack && videoTrack.readyState === 'ended') {
+              console.log('🔄 Page became visible but video track is ended - attempting recovery...');
+              // Trigger recovery by calling the track's onended handler
+              // The recovery logic will handle it
+              videoTrack.dispatchEvent(new Event('ended'));
+            } else if (videoTrack && videoTrack.readyState === 'live' && video.paused) {
+              // Track is live but video is paused - resume it
+              console.log('▶️ Page became visible - resuming video playback');
+              video.play().catch(err => {
+                console.warn('⚠️ Failed to resume video after page visibility change:', err);
+              });
+            }
+          } else if (isAnalyzingRef.current && sessionStartedRef.current) {
+            // No stream but session is active - need to reinitialize
+            console.log('🔄 Page became visible but no stream - reinitializing...');
+            initializeMediaStreams().catch(err => {
+              console.error('❌ Failed to reinitialize stream after page visibility change:', err);
+            });
+          }
+        }
+      } else if (document.hidden) {
+        // Page became hidden - this is expected, tracks may end
+        console.log('ℹ️ Page became hidden - video track may pause');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [initializeMediaStreams]);
 
   // Store predictWebcam in ref so setupVideoAnalysis can access it
   useEffect(() => {
@@ -1655,24 +2259,36 @@ const AdvancedRealTimeAnalysis = () => {
     }
   }, [isAnalyzing, poseLandmarker, drawingUtils, predictWebcam]);
 
-  // Start analysis session
+  // Start analysis session with higher-level retry wrapper
   const startAnalysis = useCallback(async () => {
-    try {
-      // Reset MediaPipe state for new session
-      frameTimestampRef.current = Math.floor(performance.now() * 1000);
-      mediaPipeErrorCountRef.current = 0;
-      lastFrameTimeRef.current = 0;
-      lastVideoTimeRef.current = -1;
-      
-      setIsAnalyzing(true);
-      setSessionStarted(true);
-      // Update refs immediately
-      isAnalyzingRef.current = true;
-      sessionStartedRef.current = true;
-      
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 2000; // 2 seconds between retries
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        // Reset MediaPipe state for new session
+        frameTimestampRef.current = Math.floor(performance.now() * 1000);
+        mediaPipeErrorCountRef.current = 0;
+        lastFrameTimeRef.current = 0;
+        lastVideoTimeRef.current = -1;
+        
+        // Use synchronized setters to update both state and refs
+        setIsAnalyzingSync(true);
+        setSessionStartedSync(true);
+        
       setSessionDuration(0);
       setLiveFeedback([]);
       setFeedbackHistory([]);
+        
+        // Show retry message if not first attempt
+        if (attempt > 1) {
+          setLiveFeedback(prev => [...prev, {
+            type: 'info',
+            message: `Retrying camera access (attempt ${attempt}/${MAX_RETRIES})...`,
+            priority: 'medium',
+            timestamp: Date.now()
+          }]);
+        }
       
       await initializeMediaStreams();
       startSessionTimer();
@@ -1683,24 +2299,104 @@ const AdvancedRealTimeAnalysis = () => {
       }, 2000);
       
       console.log('🎯 Real-time analysis started');
+        
+        // Success - clear any retry messages
+        if (attempt > 1) {
+          setLiveFeedback(prev => [...prev, {
+            type: 'success',
+            message: 'Camera access successful!',
+            priority: 'medium',
+            timestamp: Date.now()
+          }]);
+        }
+        
+        return; // Success, exit retry loop
     } catch (error) {
-      console.error('❌ Failed to start analysis:', error);
-      setIsAnalyzing(false);
-      setSessionStarted(false);
-      isAnalyzingRef.current = false;
-      sessionStartedRef.current = false;
+        console.error(`❌ Failed to start analysis (attempt ${attempt}/${MAX_RETRIES}):`, error);
+        
+        // Clean up on error
+        setIsAnalyzingSync(false);
+        setSessionStartedSync(false);
+        
+        // Don't retry for permission errors - these won't change
+        if (error.message && (
+          error.message.includes('permission denied') ||
+          error.message.includes('Permission denied') ||
+          error.message.includes('NotAllowedError')
+        )) {
+          setLiveFeedback(prev => [...prev, {
+            type: 'error',
+            message: 'Camera permission denied. Please allow camera access in your browser settings and refresh the page.',
+            priority: 'high',
+            timestamp: Date.now()
+          }]);
+          return; // Don't retry
+        }
+        
+        // Don't retry for device not found errors
+        if (error.message && (
+          error.message.includes('No camera') ||
+          error.message.includes('device not found') ||
+          error.message.includes('NotFoundError')
+        )) {
+          setLiveFeedback(prev => [...prev, {
+            type: 'error',
+            message: error.message || 'No camera found. Please connect a camera and try again.',
+            priority: 'high',
+            timestamp: Date.now()
+          }]);
+          return; // Don't retry
+        }
+        
+        // For timeout or locked camera errors, retry if we have attempts left
+        const isTimeoutError = error.message && (
+          error.message.includes('timed out') ||
+          error.message.includes('Timeout') ||
+          error.message.includes('timeout')
+        );
+        const isCameraLocked = error.message && (
+          error.message.includes('locked') ||
+          error.message.includes('in use') ||
+          error.message.includes('NotReadableError')
+        );
+        
+        if ((isTimeoutError || isCameraLocked) && attempt < MAX_RETRIES) {
+          console.warn(`⚠️ Camera ${isTimeoutError ? 'timed out' : 'locked'}, will retry in ${RETRY_DELAY_MS / 1000}s...`);
+          
+          setLiveFeedback(prev => [...prev, {
+            type: 'warning',
+            message: `Camera ${isTimeoutError ? 'timed out' : 'appears to be in use'}. Retrying in ${RETRY_DELAY_MS / 1000} seconds... (${attempt}/${MAX_RETRIES})`,
+            priority: 'high',
+            timestamp: Date.now()
+          }]);
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+          continue; // Retry
+        } else {
+          // All attempts exhausted or other error
+          const errorMessage = isTimeoutError || isCameraLocked
+            ? 'Camera access failed after multiple attempts. Please close other applications using the camera, wait a few seconds, and try again. You may need to restart your browser.'
+            : error.message || 'Failed to start camera analysis. Please check your camera permissions and try again.';
+          
+          setLiveFeedback(prev => [...prev, {
+            type: 'error',
+            message: errorMessage,
+            priority: 'high',
+            timestamp: Date.now()
+          }]);
+          return; // Stop retrying
+        }
+      }
     }
-  }, [initializeMediaStreams, startSessionTimer, sendMessage]);
+  }, [initializeMediaStreams, startSessionTimer, sendMessage, setIsAnalyzingSync, setSessionStartedSync]);
 
   // Stop analysis session
   const stopAnalysis = useCallback(() => {
-    // Update refs first
-    isAnalyzingRef.current = false;
-    sessionStartedRef.current = false;
-    
-    setIsAnalyzing(false);
+    // Use synchronized setters
+    setIsAnalyzingSync(false);
+    setSessionStartedSync(false);
     setIsRecording(false);
-    setSessionStarted(false);
     
     stopSessionTimer();
     
@@ -2148,7 +2844,7 @@ const AdvancedRealTimeAnalysis = () => {
                             {speechMetrics.sentiment}
                           </span>
                         </div>
-                      </div>  
+                      </div>
                     </div>
                   </div>
                 </motion.div>

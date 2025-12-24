@@ -14,7 +14,7 @@ import {
   LogIn,
   Zap
 } from 'lucide-react';
-import { LogoWordmark } from './Logo';
+// Logo removed - using text instead
 
 const ConsumerHeader = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -73,7 +73,9 @@ const ConsumerHeader = () => {
             <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
-            <LogoWordmark className="h-6 text-gray-900" />
+            <span className="text-xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+              Eloquent AI
+            </span>
           </Link>
 
           {/* Desktop Navigation */}

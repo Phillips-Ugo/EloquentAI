@@ -170,7 +170,7 @@ const UploadPage = () => {
     if (file.type.startsWith('audio/')) {
       return <FileAudio className="w-8 h-8 text-blue-500" />;
     } else if (file.type.startsWith('video/')) {
-      return <FileVideo className="w-8 h-8 text-purple-500" />;
+      return <FileVideo className="w-8 h-8 text-orange-500" />;
     } else if (file.type.startsWith('text/')) {
       return <Type className="w-8 h-8 text-green-500" />;
     }
@@ -197,7 +197,7 @@ const UploadPage = () => {
       icon: Video,
       title: 'Video Analysis',
       description: 'Evaluate body language, eye contact, and presentation skills',
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-orange-500 to-pink-500',
       features: ['Body Language', 'Eye Contact', 'Posture Analysis', 'Gesture Recognition']
     },
     {
@@ -230,7 +230,7 @@ const UploadPage = () => {
         >
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
             Choose Your
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
               {' '}Analysis Method
             </span>
           </h1>
@@ -402,7 +402,7 @@ const UploadPage = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-gradient-to-br from-orange-100 to-pink-100 rounded-xl flex items-center justify-center">
                         {getFileIcon(uploadedFile)}
                       </div>
                       <div>
@@ -483,7 +483,7 @@ const UploadPage = () => {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
                       <motion.div
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full"
+                        className="bg-gradient-to-r from-orange-500 to-pink-500 h-3 rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${uploadProgress}%` }}
                         transition={{ duration: 0.3 }}
@@ -536,7 +536,7 @@ const UploadPage = () => {
                   className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 ${
                     ((uploadMode === 'file' && uploadedFile) || 
                      (uploadMode === 'text' && textContent.trim())) && !isUploading
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:scale-105'
+                      ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:from-orange-600 hover:to-pink-600 shadow-lg hover:shadow-xl transform hover:scale-105'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
@@ -601,7 +601,7 @@ const UploadPage = () => {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 text-white"
+              className="bg-gradient-to-br from-orange-500 to-pink-500 rounded-2xl p-6 text-white"
             >
               <h3 className="text-xl font-bold mb-4">Why Choose Eloquent AI?</h3>
               <div className="space-y-3">

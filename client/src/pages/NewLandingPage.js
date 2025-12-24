@@ -6,7 +6,7 @@ import {
   ArrowRight, Check, Sparkles, Activity, Upload, PlayCircle,
   MessageSquare, Target, Award, Clock
 } from 'lucide-react';
-import { LogoWordmark } from '../components/Logo';
+// Logo removed - using text instead
 
 const NewLandingPage = () => {
   const [activeFeature, setActiveFeature] = useState(0);

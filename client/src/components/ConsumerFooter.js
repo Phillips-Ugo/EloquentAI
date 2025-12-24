@@ -9,7 +9,7 @@ import {
   Mail,
   ArrowRight
 } from 'lucide-react';
-import { LogoWordmark } from './Logo';
+// Logo removed - using text instead
 
 const ConsumerFooter = () => {
   const productLinks = [
@@ -49,7 +49,7 @@ const ConsumerFooter = () => {
             <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl flex items-center justify-center">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
-              <LogoWordmark className="h-6 text-white" />
+              <span className="text-xl font-bold text-white">Eloquent AI</span>
             </Link>
             <p className="text-gray-400 mb-6 max-w-md">
               AI-powered communication coaching to help you speak with confidence. 

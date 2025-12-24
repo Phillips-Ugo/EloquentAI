@@ -97,7 +97,23 @@ npm run server    # Backend only
 npm run client    # Frontend only
 ```
 
-### 5. Access the Application
+### 5. Deploy to Vercel (Production)
+
+See [DEPLOYMENT_QUICK_START.md](./DEPLOYMENT_QUICK_START.md) for detailed deployment instructions.
+
+**Quick Deploy:**
+1. Push code to GitHub
+2. Connect repository to Vercel
+3. Set root directory to `client`
+4. Add environment variables
+5. Deploy!
+
+**Backend Deployment:**
+- Deploy server separately on Railway or Render
+- Update `REACT_APP_API_URL` in Vercel
+- Update `REACT_APP_WS_URL` in Vercel
+
+### 6. Access the Application
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:5001
 - **WebSocket**: ws://localhost:8765

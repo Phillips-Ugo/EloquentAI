@@ -6,6 +6,8 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs-extra');
+const http = require('http');
+const WebSocket = require('ws');
 require('dotenv').config();
 
 const uploadRoutes = require('./routes/upload');
@@ -88,14 +90,105 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+// Create HTTP server
+const server = http.createServer(app);
+
+// Create WebSocket server
+const wss = new WebSocket.Server({ 
+  server,
+  path: '/ws',
+  perMessageDeflate: false
+});
+
+// WebSocket connection handling
+wss.on('connection', (ws, req) => {
+  const clientId = req.url.split('?')[1]?.split('=')[1] || `client_${Date.now()}`;
+  console.log(`✅ WebSocket client connected: ${clientId}`);
+  
+  ws.clientId = clientId;
+  ws.isAlive = true;
+  
+  // Handle ping/pong for connection keepalive
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+  
+  // Handle incoming messages
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      console.log(`📨 Received message from ${clientId}:`, data.type || 'unknown');
+      
+      // Echo back or process message
+      if (data.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+      } else if (data.type === 'video_data' || data.type === 'audio_data') {
+        // Process real-time data
+        ws.send(JSON.stringify({ 
+          type: 'ack', 
+          messageId: data.messageId,
+          timestamp: Date.now() 
+        }));
+      } else if (data.type === 'feedback_request') {
+        // Send feedback
+        ws.send(JSON.stringify({
+          type: 'feedback',
+          message: 'Analysis is running smoothly',
+          timestamp: Date.now()
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Error processing WebSocket message:', error);
+    }
+  });
+  
+  // Handle connection close
+  ws.on('close', (code, reason) => {
+    console.log(`🔌 WebSocket client disconnected: ${clientId} (code: ${code})`);
+  });
+  
+  // Handle errors
+  ws.on('error', (error) => {
+    console.error(`❌ WebSocket error for ${clientId}:`, error);
+  });
+  
+  // Send welcome message
+  ws.send(JSON.stringify({
+    type: 'connected',
+    clientId: clientId,
+    timestamp: Date.now(),
+    message: 'WebSocket connection established'
+  }));
+});
+
+// Keepalive ping interval
+const pingInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log(`⚠️ Terminating inactive WebSocket connection: ${ws.clientId}`);
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000); // Ping every 30 seconds
+
+// Cleanup on server shutdown
+process.on('SIGTERM', () => {
+  clearInterval(pingInterval);
+  wss.close();
+});
+
+// Start server
+server.listen(PORT, () => {
   console.log(`🚀 Eloquent AI Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`🔌 WebSocket Server: ws://localhost:${PORT}/ws`);
   
   if (process.env.NODE_ENV === 'development') {
     console.log(`🌐 Frontend: http://localhost:3000`);
   }
 });
 
-module.exports = app; 
+module.exports = { app, server, wss }; 

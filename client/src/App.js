@@ -4,22 +4,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
 // Components
-import Header from './components/Header';
+import ConsumerLandingPage from './pages/ConsumerLandingPage';
+import ConsumerHeader from './components/ConsumerHeader';
+import ConsumerFooter from './components/ConsumerFooter';
 import UploadPage from './pages/UploadPage';
 import ResultsPage from './pages/ResultsPage';
 import TextAnalysisResults from './pages/TextAnalysisResults';
 import AboutPage from './pages/AboutPage';
-import HomePage from './pages/HomePage';
 import RealTimeVideoAnalysis from './components/RealTimeVideoAnalysis';
+import RealtimeAnalysisPage from './pages/RealtimeAnalysisPage';
+import PricingPage from './pages/PricingPage';
+import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 
 
 function App() {
   return (
     <Router>
-      <div className="App min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <Header />
+      <div className="App min-h-screen bg-white">
+        <ConsumerHeader />
         
-        <main className="container mx-auto px-4 py-8">
+        <main>
           <AnimatePresence mode="wait">
             <Routes>
               <Route 
@@ -31,7 +35,7 @@ function App() {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <HomePage />
+                    <ConsumerLandingPage />
                   </motion.div>
                 } 
               />
@@ -100,21 +104,51 @@ function App() {
                   </motion.div>
                 } 
               />
+              <Route 
+                path="/realtime-analysis" 
+                element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <RealtimeAnalysisPage />
+                  </motion.div>
+                } 
+              />
+              <Route 
+                path="/pricing" 
+                element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <PricingPage />
+                  </motion.div>
+                } 
+              />
+              <Route 
+                path="/analytics" 
+                element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <AnalyticsDashboardPage />
+                  </motion.div>
+                } 
+              />
 
             </Routes>
           </AnimatePresence>
         </main>
         
-        <footer className="bg-gray-900 text-white py-8 mt-16">
-          <div className="container mx-auto px-4 text-center">
-            <p className="text-gray-400">
-              © 2024 Eloquent AI. Built with ❤️ for better communication.
-            </p>
-            <p className="text-sm text-gray-500 mt-2">
-              AI-powered speech and video analysis for presentation excellence.
-            </p>
-          </div>
-        </footer>
+        <ConsumerFooter />
       </div>
     </Router>
   );
