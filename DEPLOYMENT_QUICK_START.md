@@ -14,14 +14,14 @@
    - **Output Directory**: `build` (auto-detected)
    - **Install Command**: `npm install` (auto-detected)
 
-5. **Add Environment Variables:**
+5. **Add Environment Variables (Temporary - You'll update these after backend is deployed):**
    Click "Environment Variables" and add:
    ```
-   REACT_APP_API_URL=https://your-backend-url.railway.app
-   REACT_APP_WS_URL=wss://your-backend-url.railway.app/ws
+   REACT_APP_API_URL=http://localhost:5001
+   REACT_APP_WS_URL=ws://localhost:5001/ws
    NODE_ENV=production
    ```
-   *(You'll update these after deploying the backend)*
+   ⚠️ **Important**: These are temporary values. After you deploy the backend (Step 2), come back and update these with your actual backend URLs.
 
 6. **Click "Deploy"** 🎉
 
@@ -48,6 +48,8 @@ vercel
 ```
 
 ## Step 2: Deploy Backend to Railway (10 minutes)
+
+**⚠️ Do this BEFORE updating Vercel environment variables!**
 
 **Why Railway?** It supports WebSocket and has a great free tier.
 
