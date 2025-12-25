@@ -8,6 +8,7 @@ from typing import Optional
 import logging
 import uuid
 import os
+import json
 from pathlib import Path
 from datetime import datetime
 
@@ -59,6 +60,7 @@ def get_sessions_dir():
 
 SESSIONS_DIR = get_sessions_dir()
 
+@router.post("/")
 @router.post("/file")
 async def upload_file(
     file: UploadFile = File(...),
@@ -130,9 +132,14 @@ async def upload_file(
             "error": None
         }
         
+        # Ensure sessions directory exists
+        SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Sessions directory: {SESSIONS_DIR}")
+        
         # Save session data
         session_path = SESSIONS_DIR / f"{analysis_id}.json"
-        import json
+        logger.info(f"Saving session to: {session_path}")
+        
         with open(session_path, 'w', encoding='utf-8') as f:
             json.dump(session_data, f, indent=2, ensure_ascii=False)
         
@@ -201,7 +208,6 @@ async def upload_text(
         
         # Save session data
         session_path = SESSIONS_DIR / f"{analysis_id}.json"
-        import json
         with open(session_path, 'w', encoding='utf-8') as f:
             json.dump(session_data, f, indent=2, ensure_ascii=False)
         

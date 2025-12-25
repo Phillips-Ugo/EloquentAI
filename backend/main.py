@@ -71,8 +71,8 @@ async def startup_event():
         await init_db()
         logger.info("✅ Database initialized successfully")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize database: {e}")
-        raise
+        logger.warning(f"⚠️ Database initialization failed (continuing anyway): {e}")
+        # Don't raise - allow server to start without database for file uploads
 
 @app.on_event("shutdown")
 async def shutdown_event():
