@@ -196,4 +196,14 @@ tmp/
 config.local.js
 config.local.json
 settings.local.js
-settings.local.json 
+settings.local.json
+
+# Project-specific
+sessions/
+uploads/
+temp/
+*.db-shm
+*.db-wal
+env.local
+startup_error.log
+realtime_server.log 

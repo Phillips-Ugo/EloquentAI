@@ -253,7 +253,7 @@ const AdvancedRealTimeAnalysis = () => {
           wsRef.current = null;
         }
         
-        const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:5001/ws';
+        const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:8765';
         console.log(`🔌 Connecting to WebSocket: ${wsUrl}`);
         console.log(`🔌 Session started: ${sessionStarted}`);
         
@@ -287,7 +287,7 @@ const AdvancedRealTimeAnalysis = () => {
               if (hasError) return prev;
               return [...prev, {
                 type: 'error',
-                message: 'WebSocket connection timeout. Please check if the server is running on port 5001.',
+                message: 'WebSocket connection timeout. Please check if the server is running on port 8765.',
                 priority: 'high',
                 timestamp: Date.now()
               }];
@@ -386,7 +386,7 @@ const AdvancedRealTimeAnalysis = () => {
                 }
               })
               .catch(() => {
-                console.error('❌ Server appears to be unreachable. Is the server running on port 5001?');
+                console.error('❌ Server appears to be unreachable. Is the server running on port 8765?');
                 // Don't show error message here - let the reconnection logic handle it
                 // The onclose handler will show appropriate messages
               });
@@ -2499,27 +2499,27 @@ const AdvancedRealTimeAnalysis = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F8F9FC] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-white to-transparent">
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+      <div className="glass-header sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
                 <Brain className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Real-Time Analysis</h1>
-                <p className="text-sm text-gray-600">AI Communication Coach</p>
+                <h1 className="text-xl font-bold text-gray-900 font-heading">Real-Time Analysis</h1>
+                <p className="text-sm text-gray-500 font-medium">AI Communication Coach</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
               {/* Session Duration */}
               {sessionStarted && (
-                <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-orange-50 to-pink-50 rounded-lg border border-orange-200">
+                <div className="flex items-center space-x-2 px-4 py-2 bg-orange-50/50 backdrop-blur-md rounded-full border border-orange-100 shadow-sm">
                   <Clock className="w-4 h-4 text-orange-600" />
-                  <span className="text-sm font-medium text-gray-900">
+                  <span className="text-sm font-semibold text-gray-900 font-mono">
                     {formatDuration(sessionDuration)}
                   </span>
                 </div>
@@ -2553,12 +2553,12 @@ const AdvancedRealTimeAnalysis = () => {
           </div>
         </div>
 
-        {/* Main Content */}
+          {/* Main Content */}
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Panel - Video Feed */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Video Feed - Transparent Panel */}
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl overflow-hidden">
+            {/* Video Feed - Glass Panel */}
+            <div className="video-frame-container bg-black/5 backdrop-blur-sm relative group">
               <div className="relative aspect-video">
                 <video
                   ref={videoRef}
@@ -2680,56 +2680,56 @@ const AdvancedRealTimeAnalysis = () => {
                 >
                   {/* Key Metrics */}
                   <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-6 rounded-2xl shadow-lg">
+                    <div className="premium-card p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl flex items-center justify-center">
-                          <Eye className="w-6 h-6 text-white" />
+                        <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center">
+                          <Eye className="w-6 h-6 text-orange-600" />
                         </div>
-                        <span className={`text-2xl font-bold ${getMetricColor(videoMetrics.eyeContact)}`}>
+                        <span className={`text-3xl font-bold ${getMetricColor(videoMetrics.eyeContact)}`}>
                           {Math.round(videoMetrics.eyeContact)}%
                         </span>
                       </div>
                       <h3 className="font-semibold text-gray-900 mb-1">Eye Contact</h3>
-                      <p className="text-sm text-gray-600">Maintaining audience connection</p>
+                      <p className="text-sm text-gray-500">Maintaining audience connection</p>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl shadow-lg">
+                    <div className="premium-card p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                          <Activity className="w-6 h-6 text-white" />
+                        <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                          <Activity className="w-6 h-6 text-blue-600" />
                         </div>
-                        <span className={`text-2xl font-bold ${getMetricColor(speechMetrics.clarity)}`}>
+                        <span className={`text-3xl font-bold ${getMetricColor(speechMetrics.clarity)}`}>
                           {Math.round(speechMetrics.clarity)}%
                         </span>
                       </div>
                       <h3 className="font-semibold text-gray-900 mb-1">Speech Clarity</h3>
-                      <p className="text-sm text-gray-600">Clear and understandable speech</p>
+                      <p className="text-sm text-gray-500">Clear and understandable speech</p>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl shadow-lg">
+                    <div className="premium-card p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                          <Target className="w-6 h-6 text-white" />
+                        <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center">
+                          <Target className="w-6 h-6 text-purple-600" />
                         </div>
-                        <span className={`text-2xl font-bold ${getMetricColor(videoMetrics.posture)}`}>
+                        <span className={`text-3xl font-bold ${getMetricColor(videoMetrics.posture)}`}>
                           {Math.round(videoMetrics.posture)}%
                         </span>
                       </div>
                       <h3 className="font-semibold text-gray-900 mb-1">Posture</h3>
-                      <p className="text-sm text-gray-600">Body alignment and presence</p>
+                      <p className="text-sm text-gray-500">Body alignment and presence</p>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl shadow-lg">
+                    <div className="premium-card p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                          <Zap className="w-6 h-6 text-white" />
+                        <div className="w-12 h-12 bg-pink-100 rounded-2xl flex items-center justify-center">
+                          <Zap className="w-6 h-6 text-pink-600" />
                         </div>
-                        <span className={`text-2xl font-bold ${getMetricColor(videoMetrics.engagement)}`}>
+                        <span className={`text-3xl font-bold ${getMetricColor(videoMetrics.engagement)}`}>
                           {Math.round(videoMetrics.engagement)}%
                         </span>
                       </div>
                       <h3 className="font-semibold text-gray-900 mb-1">Engagement</h3>
-                      <p className="text-sm text-gray-600">Overall presentation engagement</p>
+                      <p className="text-sm text-gray-500">Overall presentation engagement</p>
                     </div>
                   </div>
 
@@ -3045,8 +3045,8 @@ const AdvancedRealTimeAnalysis = () => {
           {/* Right Panel - Controls & Metrics */}
           <div className="space-y-6">
             {/* Session Controls */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Session Controls</h3>
+            <div className="premium-card p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 font-heading">Session Controls</h3>
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -3160,36 +3160,36 @@ const AdvancedRealTimeAnalysis = () => {
         </div>
       </div>
       {/* Bottom Control Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 text-gray-900 z-50 shadow-lg">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center h-20 space-x-4">
+      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-50">
+        <div className="glass-control-bar rounded-full px-6 py-3 flex items-center justify-between shadow-2xl ring-1 ring-black/5">
+          <div className="flex items-center space-x-6">
             <button
               onClick={() => setAudioEnabled(!audioEnabled)}
-              className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className={`flex flex-col items-center p-2 rounded-xl transition-all duration-200 ${
+                !audioEnabled ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100 text-gray-600'
+              }`}
             >
-              {audioEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6 text-red-500" />}
-              <span className="text-xs mt-1">{audioEnabled ? 'Mute' : 'Unmute'}</span>
+              {audioEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
             </button>
-
             <button
               onClick={() => setVideoEnabled(!videoEnabled)}
-              className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className={`flex flex-col items-center p-2 rounded-xl transition-all duration-200 ${
+                !videoEnabled ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100 text-gray-600'
+              }`}
             >
-              {videoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6 text-red-500" />}
-              <span className="text-xs mt-1">{videoEnabled ? 'Stop Video' : 'Start Video'}</span>
+              {videoEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
             </button>
-
+          </div>
             <button
               onClick={toggleRecording}
               disabled={!poseLandmarker}
-              className={`px-8 py-3 rounded-xl font-semibold text-white transition-all duration-200 flex items-center space-x-2 ${
+              className={`px-8 py-3 rounded-full font-semibold text-white transition-all duration-300 shadow-lg transform hover:-translate-y-1 ${
                 isAnalyzing
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600'
-              } ${
-                !poseLandmarker && 'opacity-50 cursor-not-allowed'
-              }`}
+                  ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30'
+                  : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 shadow-orange-500/30'
+              } ${!poseLandmarker && 'opacity-75 cursor-not-allowed'}`}
             >
+              <div className="flex items-center space-x-2">
               {!poseLandmarker ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
@@ -3197,33 +3197,17 @@ const AdvancedRealTimeAnalysis = () => {
                 </>
               ) : isAnalyzing ? (
                 <>
-                  <Square className="w-5 h-5" />
-                  <span>Stop</span>
+                  <Square className="w-5 h-5 fill-current" />
+                  <span>Stop Session</span>
                 </>
               ) : (
                 <>
-                  <Play className="w-5 h-5" />
+                  <Play className="w-5 h-5 fill-current" />
                   <span>Start Analysis</span>
                 </>
               )}
+              </div>
             </button>
-
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <Settings className="w-6 h-6" />
-              <span className="text-xs mt-1">Settings</span>
-            </button>
-
-            <button
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              {isFullscreen ? <Minimize2 className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
-              <span className="text-xs mt-1">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>

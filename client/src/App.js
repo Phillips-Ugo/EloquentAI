@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
+import './styles/world-class.css';
 
 // Components
 import ConsumerLandingPage from './pages/ConsumerLandingPage';
