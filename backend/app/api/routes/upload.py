@@ -27,18 +27,32 @@ def get_uploads_dir():
         # Relative to current working directory
         Path("server/uploads"),
         Path("../server/uploads"),
+        # Fallback to temp directory
+        Path.home() / ".media_analyzer" / "uploads",
     ]
     
     for path in possible_paths:
-        if path and str(path) and path.exists() and path.is_dir():
+        try:
+            # Create directory if it doesn't exist
+            path.mkdir(parents=True, exist_ok=True)
+            
+            # Test write permissions
+            test_file = path / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+            
+            logger.info(f"Using uploads directory: {path}")
             return path
+        except Exception as e:
+            logger.warning(f"Cannot use path {path}: {e}")
+            continue
     
-    # Default fallback - create if doesn't exist
-    default_path = Path(__file__).parent.parent.parent.parent.parent / "server" / "uploads"
-    default_path.mkdir(parents=True, exist_ok=True)
-    return default_path
-
-UPLOADS_DIR = get_uploads_dir()
+    # If all else fails, use temp directory
+    import tempfile
+    temp_path = Path(tempfile.gettempdir()) / "media_analyzer_uploads"
+    temp_path.mkdir(parents=True, exist_ok=True)
+    logger.warning(f"Using temporary uploads directory: {temp_path}")
+    return temp_path
 
 # Path to sessions directory
 def get_sessions_dir():
@@ -48,24 +62,61 @@ def get_sessions_dir():
         Path(__file__).parent.parent.parent.parent / "server" / "sessions",
         Path("server/sessions"),
         Path("../server/sessions"),
+        # Fallback to temp directory
+        Path.home() / ".media_analyzer" / "sessions",
     ]
     
     for path in possible_paths:
-        if path and str(path) and path.exists() and path.is_dir():
+        try:
+            # Create directory if it doesn't exist
+            path.mkdir(parents=True, exist_ok=True)
+            
+            # Test write permissions
+            test_file = path / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+            
+            logger.info(f"Using sessions directory: {path}")
             return path
+        except Exception as e:
+            logger.warning(f"Cannot use path {path}: {e}")
+            continue
     
-    default_path = Path(__file__).parent.parent.parent.parent.parent / "server" / "sessions"
-    default_path.mkdir(parents=True, exist_ok=True)
-    return default_path
+    # If all else fails, use temp directory
+    import tempfile
+    temp_path = Path(tempfile.gettempdir()) / "media_analyzer_sessions"
+    temp_path.mkdir(parents=True, exist_ok=True)
+    logger.warning(f"Using temporary sessions directory: {temp_path}")
+    return temp_path
 
-SESSIONS_DIR = get_sessions_dir()
+# Initialize directories (lazy initialization to avoid startup crashes)
+UPLOADS_DIR = None
+SESSIONS_DIR = None
+
+def ensure_directories():
+    """Ensure directories are initialized"""
+    global UPLOADS_DIR, SESSIONS_DIR
+    if UPLOADS_DIR is None or SESSIONS_DIR is None:
+        try:
+            UPLOADS_DIR = get_uploads_dir()
+            SESSIONS_DIR = get_sessions_dir()
+            logger.info(f"Directories initialized - Uploads: {UPLOADS_DIR}, Sessions: {SESSIONS_DIR}")
+        except Exception as e:
+            logger.error(f"Failed to initialize directories: {e}")
+            # Use temp directories as fallback
+            import tempfile
+            UPLOADS_DIR = Path(tempfile.gettempdir()) / "media_analyzer_uploads"
+            SESSIONS_DIR = Path(tempfile.gettempdir()) / "media_analyzer_sessions"
+            UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+            SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+            logger.warning(f"Using fallback temp directories: {UPLOADS_DIR}, {SESSIONS_DIR}")
 
 @router.post("/")
 @router.post("/file")
 async def upload_file(
     file: UploadFile = File(...),
-    analysisType: Optional[str] = Form("auto"),
-    uploadMode: Optional[str] = Form("file")
+    analysisType: Optional[str] = Form(None),
+    uploadMode: Optional[str] = Form(None)
 ):
     """
     Upload a file for analysis
@@ -81,9 +132,19 @@ async def upload_file(
     - type: Detected file type
     """
     try:
+        # Ensure directories are initialized
+        ensure_directories()
+        
+        logger.info(f"Upload request - filename: {file.filename}, analysisType: {analysisType}, uploadMode: {uploadMode}")
+        
         # Validate file
         if not file.filename:
+            logger.error("No filename provided")
             raise HTTPException(status_code=400, detail="No file provided")
+        
+        # Set defaults
+        analysisType = analysisType or "auto"
+        uploadMode = uploadMode or "file"
         
         # Determine file type
         filename_lower = file.filename.lower()
@@ -103,16 +164,27 @@ async def upload_file(
         
         # Generate unique analysis ID
         analysis_id = str(uuid.uuid4())
+        logger.info(f"Generated analysis ID: {analysis_id}")
         
         # Save file
         file_extension = Path(file.filename).suffix
         saved_filename = f"{analysis_id}{file_extension}"
         file_path = UPLOADS_DIR / saved_filename
         
+        logger.info(f"Saving file to: {file_path}")
+        
         # Read and save file
-        file_content = await file.read()
-        with open(file_path, 'wb') as f:
-            f.write(file_content)
+        try:
+            file_content = await file.read()
+            logger.info(f"Read {len(file_content)} bytes from uploaded file")
+            
+            with open(file_path, 'wb') as f:
+                f.write(file_content)
+            
+            logger.info(f"File saved successfully: {file_path}")
+        except Exception as e:
+            logger.error(f"Error saving file: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
         
         # Create session data
         session_data = {
@@ -123,8 +195,8 @@ async def upload_file(
             "size": len(file_content),
             "mimetype": file.content_type or "application/octet-stream",
             "type": file_type,
-            "uploadMode": uploadMode or "file",
-            "analysisType": analysisType or "auto",
+            "uploadMode": uploadMode,
+            "analysisType": analysisType,
             "createdAt": datetime.now().isoformat(),
             "uploadedAt": datetime.now().isoformat(),
             "status": "uploaded",
@@ -132,16 +204,24 @@ async def upload_file(
             "error": None
         }
         
-        # Ensure sessions directory exists
-        SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Sessions directory: {SESSIONS_DIR}")
-        
         # Save session data
-        session_path = SESSIONS_DIR / f"{analysis_id}.json"
-        logger.info(f"Saving session to: {session_path}")
-        
-        with open(session_path, 'w', encoding='utf-8') as f:
-            json.dump(session_data, f, indent=2, ensure_ascii=False)
+        try:
+            session_path = SESSIONS_DIR / f"{analysis_id}.json"
+            logger.info(f"Saving session data to: {session_path}")
+            
+            with open(session_path, 'w', encoding='utf-8') as f:
+                json.dump(session_data, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Session data saved successfully")
+        except Exception as e:
+            logger.error(f"Error saving session data: {e}")
+            # Try to clean up uploaded file
+            try:
+                if file_path.exists():
+                    file_path.unlink()
+            except:
+                pass
+            raise HTTPException(status_code=500, detail=f"Failed to save session data: {str(e)}")
         
         logger.info(f"File uploaded successfully: {file.filename} -> {analysis_id}")
         
@@ -153,14 +233,14 @@ async def upload_file(
                 "filename": file.filename,
                 "size": len(file_content),
                 "type": file_type,
-                "uploadMode": uploadMode or "file"
+                "uploadMode": uploadMode
             }
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error uploading file: {str(e)}")
+        logger.error(f"Unexpected error uploading file: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to upload file: {str(e)}"
@@ -169,7 +249,7 @@ async def upload_file(
 @router.post("/text")
 async def upload_text(
     textContent: str = Form(...),
-    analysisType: Optional[str] = Form("text")
+    analysisType: Optional[str] = Form(None)
 ):
     """
     Upload text for analysis
@@ -181,11 +261,21 @@ async def upload_text(
     - analysisId: Unique ID for the analysis session
     """
     try:
+        # Ensure directories are initialized
+        ensure_directories()
+        
+        logger.info(f"Text upload request - length: {len(textContent) if textContent else 0}")
+        
         if not textContent or not textContent.strip():
+            logger.error("No text content provided")
             raise HTTPException(status_code=400, detail="No text content provided")
+        
+        # Set default
+        analysisType = analysisType or "text"
         
         # Generate unique analysis ID
         analysis_id = str(uuid.uuid4())
+        logger.info(f"Generated analysis ID for text: {analysis_id}")
         
         # Create session data
         session_data = {
@@ -197,7 +287,7 @@ async def upload_text(
             "mimetype": "text/plain",
             "type": "text",
             "uploadMode": "text",
-            "analysisType": analysisType or "text",
+            "analysisType": analysisType,
             "textContent": textContent,
             "createdAt": datetime.now().isoformat(),
             "uploadedAt": datetime.now().isoformat(),
@@ -207,9 +297,17 @@ async def upload_text(
         }
         
         # Save session data
-        session_path = SESSIONS_DIR / f"{analysis_id}.json"
-        with open(session_path, 'w', encoding='utf-8') as f:
-            json.dump(session_data, f, indent=2, ensure_ascii=False)
+        try:
+            session_path = SESSIONS_DIR / f"{analysis_id}.json"
+            logger.info(f"Saving text session data to: {session_path}")
+            
+            with open(session_path, 'w', encoding='utf-8') as f:
+                json.dump(session_data, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Text session data saved successfully")
+        except Exception as e:
+            logger.error(f"Error saving text session data: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to save session data: {str(e)}")
         
         logger.info(f"Text uploaded successfully: {analysis_id}")
         
@@ -228,9 +326,8 @@ async def upload_text(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error uploading text: {str(e)}")
+        logger.error(f"Unexpected error uploading text: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to upload text: {str(e)}"
         )
-
