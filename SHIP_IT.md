@@ -9,7 +9,8 @@ Your project is now configured for Vercel deployment! Here's what's been set up:
    - Serves static files with proper caching
    - Handles routing for SPA
 
-2. **Client Vercel Config** (`client/vercel.json`)
+2. **Vercel Configuration** (`vercel.json` in root)
+   - Uses `rootDirectory: "client"` for monorepo setup
    - Optimized for Create React App
    - Proper cache headers
    - SPA routing support
@@ -30,8 +31,8 @@ Your project is now configured for Vercel deployment! Here's what's been set up:
 **Via Dashboard (Easiest):**
 1. Go to [vercel.com](https://vercel.com) → Sign in with GitHub
 2. Click "New Project" → Import your repo
-3. Configure:
-   - **Root Directory**: `client`
+3. Configure (should auto-detect from vercel.json):
+   - **Root Directory**: `client` (or leave empty - vercel.json handles it)
    - **Framework**: Other
 4. Add environment variables (you'll update these after backend is deployed):
    ```
@@ -73,9 +74,10 @@ Your project is now configured for Vercel deployment! Here's what's been set up:
 
 ## 📋 Files Created
 
-- ✅ `vercel.json` - Main Vercel config
-- ✅ `client/vercel.json` - Client-specific config
+- ✅ `vercel.json` - Main Vercel config (in root, uses rootDirectory)
 - ✅ `.vercelignore` - Files to exclude
+- ✅ `DEPLOYMENT_READY.md` - Complete deployment guide
+- ✅ `VERCEL_FINAL_SETUP.md` - Final setup instructions
 - ✅ `DEPLOYMENT_QUICK_START.md` - Quick guide
 - ✅ `VERCEL_DEPLOYMENT.md` - Full docs
 - ✅ `DEPLOYMENT_CHECKLIST.md` - Checklist
