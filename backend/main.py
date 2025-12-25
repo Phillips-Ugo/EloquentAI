@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 import uuid
 
-from app.api.routes import audio, landmarks, sessions, health, analysis
+from app.api.routes import audio, landmarks, sessions, health, analysis, upload
 from app.core.config import settings
 from app.core.database import init_db
 from app.models.schemas import (
@@ -53,6 +53,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 app.include_router(audio.router, prefix="/api/predict", tags=["audio"])
 app.include_router(landmarks.router, prefix="/api/analyze", tags=["landmarks"])
 app.include_router(sessions.router, prefix="/api/session", tags=["sessions"])
