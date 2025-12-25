@@ -56,6 +56,7 @@ const ResultsPage = () => {
       
       if (response.data.success) {
         console.log('Setting video results:', response.data.data.results);
+        console.log('Full response data:', JSON.stringify(response.data.data, null, 2));
         setResults(response.data.data.results);
       } else {
         console.log('Video API returned success: false');
@@ -98,7 +99,11 @@ const ResultsPage = () => {
   };
 
   const formatScore = (score) => {
-    return Math.round(score * 10);
+    if (typeof score === 'number') {
+      // Scores are 0-1, convert to 0-100 percentage
+      return Math.round(score * 100);
+    }
+    return 0;
   };
 
   const getOverallScoreColor = (score) => {
@@ -162,6 +167,16 @@ const ResultsPage = () => {
     // Audio-only analysis with flat structure
     analysisData = results;
   }
+  
+  // Debug logging to help diagnose mock data issues
+  console.log('Analysis data extracted:', analysisData);
+  console.log('Raw scores:', {
+    posture: analysisData.posture_score,
+    eye_contact: analysisData.eye_contact_score,
+    clarity: analysisData.clarity_score,
+    engagement: analysisData.engagement_score,
+    overall: analysisData.overallScore || analysisData.overall_score
+  });
   
   const isAudio = !hasVideoAnalysis;
 
@@ -266,31 +281,36 @@ const ResultsPage = () => {
 
           {/* Score Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {(isAudio ? speechChartData : videoChartData).map((item, index) => (
-              <motion.div
-                key={item.name}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 + index * 0.1 }}
-                className={`p-4 rounded-xl border-2 ${getScoreBgColor(item.score / 10)} transition-all duration-300 hover:scale-105`}
-              >
-                <div className="flex items-center space-x-3 mb-2">
-                  <item.icon className={`w-5 h-5 ${getScoreColor(item.score / 10)}`} />
-                  <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                </div>
-                <div className={`text-2xl font-bold ${getScoreColor(item.score / 10)}`}>
-                  {item.score}/10
-                </div>
-                <div className="mt-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full bg-gradient-to-r ${getScoreGradient(item.score / 10)} transition-all duration-1000`}
-                      style={{ width: `${item.score * 10}%` }}
-                    />
+            {(isAudio ? speechChartData : videoChartData).map((item, index) => {
+              // Convert score from 0-10 scale to 0-1 scale for proper percentage calculation
+              const scoreValue = typeof item.score === 'number' ? item.score / 100 : 0;
+              const percentage = Math.min(100, Math.max(0, scoreValue * 100));
+              return (
+                <motion.div
+                  key={item.name}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 + index * 0.1 }}
+                  className={`p-4 rounded-xl border-2 ${getScoreBgColor(scoreValue)} transition-all duration-300 hover:scale-105`}
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <item.icon className={`w-5 h-5 ${getScoreColor(scoreValue)}`} />
+                    <span className="text-sm font-medium text-gray-700">{item.name}</span>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                  <div className={`text-2xl font-bold ${getScoreColor(scoreValue)}`}>
+                    {item.score}%
+                  </div>
+                  <div className="mt-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full bg-gradient-to-r ${getScoreGradient(scoreValue)} transition-all duration-1000`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
 
