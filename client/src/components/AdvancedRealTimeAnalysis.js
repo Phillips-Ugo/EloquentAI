@@ -258,8 +258,12 @@ const AdvancedRealTimeAnalysis = () => {
         console.log(`🔌 Session started: ${sessionStarted}`);
         
         // Check server health before attempting WebSocket connection (non-blocking)
+        // Note: WebSocket servers may not have HTTP endpoints, so this is optional
         const healthCheckUrl = wsUrl.replace('ws://', 'http://').replace('/ws', '/api/health');
-        fetch(healthCheckUrl)
+        fetch(healthCheckUrl, { 
+          mode: 'cors',
+          method: 'GET'
+        })
           .then(response => {
             if (response.ok) {
               console.log('✅ Server health check passed');
@@ -268,7 +272,8 @@ const AdvancedRealTimeAnalysis = () => {
             }
           })
           .catch(() => {
-            console.warn('⚠️ Server health check failed - server may not be running');
+            // Health check failed - this is OK, WebSocket connection will still be attempted
+            console.warn('⚠️ Server health check failed (this is OK - WebSocket will still connect)');
           });
         
         wsRef.current = new WebSocket(wsUrl);

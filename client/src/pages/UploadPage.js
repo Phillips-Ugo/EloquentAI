@@ -136,7 +136,9 @@ const UploadPage = () => {
       }
     } catch (err) {
       console.error('Upload error:', err);
-      setError(err.response?.data?.message || 'Upload failed. Please try again.');
+      console.error('Error response data:', err.response?.data);
+      console.error('Error detail:', err.response?.data?.detail || err.response?.data?.message);
+      setError(err.response?.data?.detail || err.response?.data?.message || 'Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
     }

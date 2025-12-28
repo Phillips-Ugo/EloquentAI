@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
     PROJECT_NAME: str = "Communication Coach"
     VERSION: str = "1.0.0"
-    DEBUG: bool = False
+    DEBUG: bool = True  # Set to True for development to see detailed errors
     
     # CORS Configuration
     ALLOWED_ORIGINS: List[str] = [
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
         "http://localhost:3001",
         "https://localhost:3000",
         "https://localhost:3001",
+        "*",  # Allow all origins in development
     ]
     
     # Database Configuration

@@ -46,7 +46,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=["*"] if settings.DEBUG else settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -92,12 +92,15 @@ async def root():
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Global exception handler"""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    import traceback
+    error_trace = traceback.format_exc()
+    logger.error(f"Unhandled exception: {exc}\n{error_trace}")
     return JSONResponse(
         status_code=500,
         content={
             "error": "Internal server error",
-            "message": "An unexpected error occurred",
+            "message": str(exc) if settings.DEBUG else "An unexpected error occurred",
+            "detail": error_trace if settings.DEBUG else None,
             "timestamp": datetime.utcnow().isoformat()
         }
     )
