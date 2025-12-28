@@ -16,6 +16,20 @@ const api = axios.create({
   retryDelay: 1000,
 });
 
+// Request interceptor to handle FormData properly
+api.interceptors.request.use(
+  (config) => {
+    // If data is FormData, remove Content-Type header to let browser set it with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Request interceptor
 api.interceptors.request.use(
   (config) => {

@@ -104,8 +104,9 @@ const UploadPage = () => {
     formData.append('uploadMode', uploadMode);
 
         response = await api.post('/api/upload', formData, {
+        // Don't set Content-Type - let browser set it with boundary
         headers: {
-          'Content-Type': 'multipart/form-data',
+          // Remove Content-Type to let axios/browser set it automatically with boundary
         },
         onUploadProgress: (progressEvent) => {
           const progress = Math.round(
