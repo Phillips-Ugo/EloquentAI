@@ -562,7 +562,21 @@ class LightweightRealTimeServer:
             session['frame_count'] = session.get('frame_count', 0) + 1
             
             # Calculate metrics from landmarks
-            scores = self._calculate_landmark_metrics(landmarks, width, height, client_id)
+            raw_scores = self._calculate_landmark_metrics(landmarks, width, height, client_id)
+            
+            # Apply smoothing to prevent rapid changes
+            if 'smoothed_scores' not in session:
+                session['smoothed_scores'] = raw_scores.copy()
+            else:
+                # Exponential moving average (alpha = 0.3 means 30% new, 70% old)
+                alpha = 0.3
+                for key in raw_scores:
+                    if key in session['smoothed_scores']:
+                        session['smoothed_scores'][key] = alpha * raw_scores[key] + (1 - alpha) * session['smoothed_scores'][key]
+                    else:
+                        session['smoothed_scores'][key] = raw_scores[key]
+            
+            scores = session['smoothed_scores']
             
             # Send results back to client immediately
             await websocket.send(json.dumps({
@@ -724,7 +738,10 @@ class LightweightRealTimeServer:
             audio_array = data.get('data', [])
             sample_rate = data.get('sampleRate', 16000)
             
+            logger.info(f"Received audio_data from {client_id}: {len(audio_array)} samples at {sample_rate}Hz")
+            
             if not audio_array or len(audio_array) < 100:
+                logger.debug(f"Audio data too short: {len(audio_array)} samples")
                 return
             
             # Convert to numpy array

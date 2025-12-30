@@ -536,13 +536,17 @@ const AdvancedRealTimeAnalysis = () => {
             const audioArray = Array.from(inputData);
             
             // Send audio data for analysis (throttle to avoid overwhelming the connection)
-            if (Math.random() < 0.1) { // Send ~10% of frames
-              sendMessage({
+            // Send ~20% of frames for better speech detection
+            if (Math.random() < 0.2) {
+              const sent = sendMessage({
                 type: 'audio_data',
                 data: audioArray,
                 timestamp: Date.now(),
                 sampleRate: audioContextRef.current.sampleRate
               });
+              if (sent) {
+                console.log('🎤 Audio data sent:', audioArray.length, 'samples');
+              }
             }
           } catch (err) {
             console.error('❌ Error processing audio:', err);
@@ -561,7 +565,7 @@ const AdvancedRealTimeAnalysis = () => {
           }
           try {
             const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-            if (Math.random() < 0.1) {
+            if (Math.random() < 0.2) {
               sendMessage({
                 type: 'audio_data',
                 data: Array.from(inputData),
