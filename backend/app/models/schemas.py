@@ -26,9 +26,10 @@ class AnalysisType(str, Enum):
 
 # Request Schemas
 class AudioAnalysisRequest(BaseModel):
-    file: UploadFile
+    """Audio analysis request - file is handled separately by FastAPI"""
     user_id: Optional[str] = None
     session_id: Optional[str] = None
+    file_path: Optional[str] = None  # Path to uploaded file
 
 class LandmarkData(BaseModel):
     t: float = Field(..., description="Timestamp in seconds")

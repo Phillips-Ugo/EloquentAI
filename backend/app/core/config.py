@@ -2,9 +2,23 @@
 Application configuration
 """
 
-from pydantic_settings import BaseSettings
 from typing import List, Optional
 import os
+
+# Try pydantic v2 first, fallback to v1
+try:
+    from pydantic_settings import BaseSettings
+except ImportError:
+    try:
+        from pydantic import BaseSettings
+    except ImportError:
+        # Fallback: create a simple settings class
+        class BaseSettings:
+            def __init__(self, **kwargs):
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+            class Config:
+                pass
 
 class Settings(BaseSettings):
     # API Configuration

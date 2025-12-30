@@ -4,24 +4,66 @@ Audio analysis service using PyTorch and transformers
 
 import logging
 import numpy as np
-import torch
-import torchaudio
-import librosa
 from typing import Dict, List, Any, Optional
 import io
-import soundfile as sf
-from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtractor
 import re
 import os
+
+logger = logging.getLogger(__name__)
+
+# Try to import ML libraries - these may not be available on all systems
+TORCH_AVAILABLE = False
+TORCHAUDIO_AVAILABLE = False
+LIBROSA_AVAILABLE = False
+TRANSFORMERS_AVAILABLE = False
+
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    logger.warning("torch not available - audio analysis will be limited")
+    torch = None
+
+try:
+    import torchaudio
+    TORCHAUDIO_AVAILABLE = True
+except (ImportError, OSError) as e:
+    logger.warning(f"torchaudio not available ({e}) - audio analysis will be limited")
+    torchaudio = None
+
+try:
+    import librosa
+    LIBROSA_AVAILABLE = True
+except ImportError:
+    logger.warning("librosa not available - audio analysis will be limited")
+    librosa = None
+
+try:
+    import soundfile as sf
+except ImportError:
+    logger.warning("soundfile not available")
+    sf = None
+
+try:
+    from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtractor
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    logger.warning("transformers not available - ML features will be limited")
+    Wav2Vec2ForSequenceClassification = None
+    Wav2Vec2FeatureExtractor = None
 
 from app.models.schemas import AudioAnalysisResponse, Replacement, Timestamp
 from app.core.config import settings
 
-logger = logging.getLogger(__name__)
-
 class AudioAnalysisService:
     def __init__(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # Handle case when torch is not available
+        if TORCH_AVAILABLE and torch is not None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = None
+            logger.warning("torch not available - running in limited mode")
+        
         self.model = None
         self.feature_extractor = None
         self.emotion_labels = [
@@ -35,8 +77,8 @@ class AudioAnalysisService:
             'right': r'\b(right|okay)\b'
         }
         
-        # Load model if not in mock mode
-        if not settings.MOCK_RESPONSES:
+        # Load model if not in mock mode and torch is available
+        if not settings.MOCK_RESPONSES and TORCH_AVAILABLE:
             self.load_model()
     
     def load_model(self):
