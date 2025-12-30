@@ -453,7 +453,7 @@ class LightweightRealTimeServer:
             data = json.loads(message)
             message_type = data.get('type')
             
-            if message_type == 'start_session':
+            if message_type == 'start_session' or message_type == 'start_analysis':
                 await self.handle_start_session(websocket, client_id, data)
             elif message_type == 'video_frame':
                 await self.handle_video_frame(client_id, data)
@@ -465,12 +465,15 @@ class LightweightRealTimeServer:
             elif message_type == 'audio_data':
                 # Handle audio data from frontend (JSON array format)
                 await self.handle_audio_data(websocket, client_id, data)
-            elif message_type == 'stop_session':
+            elif message_type == 'stop_session' or message_type == 'stop_analysis':
                 await self.handle_stop_session(websocket, client_id)
+            elif message_type == 'request_feedback':
+                # Handle feedback request - send current analysis
+                await self.handle_feedback_request(websocket, client_id)
             elif message_type == 'ping':
                 await websocket.send(json.dumps({'type': 'pong', 'timestamp': time.time()}))
             else:
-                logger.warning(f"Unknown message type: {message_type}")
+                logger.debug(f"Unhandled message type: {message_type}")
                 
         except json.JSONDecodeError:
             logger.error(f"Invalid JSON message from client {client_id}")
@@ -951,6 +954,97 @@ class LightweightRealTimeServer:
         except Exception as e:
             logger.error(f"Error processing audio chunk for client {client_id}: {str(e)}")
     
+    async def handle_feedback_request(self, websocket, client_id: str):
+        """Handle request for AI feedback"""
+        try:
+            analyzer = self.analyzers.get(client_id)
+            session = self.client_sessions.get(client_id)
+            
+            if not analyzer or not session:
+                await websocket.send(json.dumps({
+                    'type': 'feedback',
+                    'feedback': '',
+                    'timestamp': time.time()
+                }))
+                return
+            
+            # Get current metrics
+            avg_posture = np.mean(analyzer.session_data['posture_scores'][-5:]) if analyzer.session_data['posture_scores'] else 0.5
+            avg_eye_contact = np.mean(analyzer.session_data['eye_contact_scores'][-5:]) if analyzer.session_data['eye_contact_scores'] else 0.5
+            avg_gesture = np.mean(analyzer.session_data['gesture_scores'][-5:]) if analyzer.session_data['gesture_scores'] else 0.5
+            avg_emotion = np.mean(analyzer.session_data['emotion_scores'][-5:]) if analyzer.session_data['emotion_scores'] else 0.5
+            
+            # Get speech metrics if available
+            speech_history = session.get('speech_metrics_history', [])
+            if speech_history:
+                avg_clarity = np.mean([m['clarity'] for m in speech_history[-5:]]) if speech_history else 0.5
+                avg_volume = np.mean([m['volume'] for m in speech_history[-5:]]) if speech_history else 0.5
+            else:
+                avg_clarity = 0.5
+                avg_volume = 0.5
+            
+            # Generate feedback using Gemini if available
+            feedback_text = ""
+            if analyzer.gemini_model:
+                try:
+                    prompt = f"""You are a real-time communication coach. Based on these metrics, provide ONE brief, encouraging tip (max 15 words):
+
+Posture: {avg_posture:.0%} | Eye Contact: {avg_eye_contact:.0%} | Gestures: {avg_gesture:.0%}
+Voice Clarity: {avg_clarity:.0%} | Volume: {avg_volume:.0%}
+
+Focus on the lowest scoring area. Be specific and actionable."""
+
+                    response = analyzer.gemini_model.generate_content(prompt)
+                    feedback_text = response.text.strip()
+                except Exception as e:
+                    logger.error(f"Gemini feedback error: {str(e)}")
+                    # Generate simple feedback based on lowest metric
+                    metrics = {
+                        'posture': avg_posture,
+                        'eye contact': avg_eye_contact,
+                        'gestures': avg_gesture,
+                        'voice clarity': avg_clarity
+                    }
+                    lowest = min(metrics, key=metrics.get)
+                    feedback_text = f"Try to improve your {lowest}."
+            else:
+                # Simple rule-based feedback
+                if avg_eye_contact < 0.5:
+                    feedback_text = "Look directly at the camera for better eye contact."
+                elif avg_posture < 0.5:
+                    feedback_text = "Sit up straight and keep shoulders level."
+                elif avg_gesture < 0.4:
+                    feedback_text = "Use hand gestures to emphasize key points."
+                elif avg_volume < 0.4:
+                    feedback_text = "Speak a bit louder for better clarity."
+                else:
+                    feedback_text = "Great job! Keep up the good communication."
+            
+            # Send feedback
+            await websocket.send(json.dumps({
+                'type': 'feedback',
+                'feedback': feedback_text,
+                'metrics': {
+                    'posture': round(avg_posture * 100),
+                    'eye_contact': round(avg_eye_contact * 100),
+                    'gesture': round(avg_gesture * 100),
+                    'emotion': round(avg_emotion * 100),
+                    'clarity': round(avg_clarity * 100),
+                    'volume': round(avg_volume * 100)
+                },
+                'timestamp': time.time()
+            }))
+            
+            logger.debug(f"Sent feedback to client {client_id}: {feedback_text[:50]}...")
+            
+        except Exception as e:
+            logger.error(f"Error handling feedback request for {client_id}: {str(e)}")
+            await websocket.send(json.dumps({
+                'type': 'feedback',
+                'feedback': '',
+                'timestamp': time.time()
+            }))
+
     async def handle_stop_session(self, websocket, client_id: str):
         """Handle session stop request"""
         try:
