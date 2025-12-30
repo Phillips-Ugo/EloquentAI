@@ -457,6 +457,9 @@ class LightweightRealTimeServer:
                 await self.handle_start_session(websocket, client_id, data)
             elif message_type == 'video_frame':
                 await self.handle_video_frame(client_id, data)
+            elif message_type == 'video_data':
+                # Handle landmark data from frontend (more efficient than full frames)
+                await self.handle_video_data(websocket, client_id, data)
             elif message_type == 'audio_chunk':
                 await self.handle_audio_chunk(client_id, data)
             elif message_type == 'stop_session':
@@ -532,6 +535,183 @@ class LightweightRealTimeServer:
         except Exception as e:
             logger.error(f"Error processing video frame for client {client_id}: {str(e)}")
     
+    async def handle_video_data(self, websocket, client_id: str, data: dict):
+        """Handle video data with landmarks from frontend - calculate metrics from landmarks"""
+        try:
+            landmarks = data.get('landmarks', [])
+            width = data.get('width', 1280)
+            height = data.get('height', 720)
+            
+            if not landmarks:
+                return
+            
+            # Initialize session if needed
+            if client_id not in self.client_sessions:
+                await self.handle_start_session(websocket, client_id, {'session_id': str(uuid.uuid4())})
+            
+            session = self.client_sessions.get(client_id)
+            if not session:
+                return
+            
+            session['frame_count'] = session.get('frame_count', 0) + 1
+            
+            # Calculate metrics from landmarks
+            scores = self._calculate_landmark_metrics(landmarks, width, height, client_id)
+            
+            # Send results back to client immediately
+            await websocket.send(json.dumps({
+                'type': 'analysis_result',
+                'result': {
+                    'scores': scores,
+                    'transcription': {'text': ''},
+                    'feedback': {'feedback': ''},
+                    'video_metrics': {
+                        'frames_processed': session.get('frame_count', 0),
+                        'session_duration': time.time() - session.get('start_time', time.time())
+                    }
+                },
+                'timestamp': time.time()
+            }))
+            
+            logger.debug(f"Processed landmarks from client {client_id}: scores={scores}")
+            
+        except Exception as e:
+            logger.error(f"Error processing video data for client {client_id}: {str(e)}")
+    
+    def _calculate_landmark_metrics(self, landmarks: list, width: int, height: int, client_id: str) -> dict:
+        """Calculate metrics from MediaPipe pose landmarks"""
+        try:
+            # MediaPipe pose landmarks indices:
+            # 0: nose, 1: left eye inner, 2: left eye, 3: left eye outer
+            # 4: right eye inner, 5: right eye, 6: right eye outer
+            # 7: left ear, 8: right ear, 9: mouth left, 10: mouth right
+            # 11: left shoulder, 12: right shoulder
+            # 13: left elbow, 14: right elbow
+            # 15: left wrist, 16: right wrist
+            # 23: left hip, 24: right hip
+            
+            if len(landmarks) < 25:
+                return self._get_default_scores()
+            
+            # Get key landmarks
+            nose = landmarks[0] if len(landmarks) > 0 else None
+            left_eye = landmarks[2] if len(landmarks) > 2 else None
+            right_eye = landmarks[5] if len(landmarks) > 5 else None
+            left_shoulder = landmarks[11] if len(landmarks) > 11 else None
+            right_shoulder = landmarks[12] if len(landmarks) > 12 else None
+            left_wrist = landmarks[15] if len(landmarks) > 15 else None
+            right_wrist = landmarks[16] if len(landmarks) > 16 else None
+            left_hip = landmarks[23] if len(landmarks) > 23 else None
+            right_hip = landmarks[24] if len(landmarks) > 24 else None
+            
+            # ===== EYE CONTACT =====
+            # Check if face is centered and looking at camera
+            eye_contact_score = 0.5
+            if nose and left_eye and right_eye:
+                # Face should be centered horizontally
+                nose_x = nose.get('x', 0.5)
+                center_offset = abs(nose_x - 0.5)
+                
+                # Both eyes should be visible (high visibility)
+                left_vis = left_eye.get('visibility', 0)
+                right_vis = right_eye.get('visibility', 0)
+                
+                # Score based on centering and eye visibility
+                centering_score = 1.0 - min(1.0, center_offset * 2)
+                visibility_score = (left_vis + right_vis) / 2
+                
+                eye_contact_score = (centering_score * 0.5 + visibility_score * 0.5)
+                eye_contact_score = max(0.3, min(1.0, eye_contact_score))
+            
+            # ===== POSTURE =====
+            posture_score = 0.5
+            if left_shoulder and right_shoulder and left_hip and right_hip:
+                # Check shoulder alignment (should be level)
+                shoulder_diff = abs(left_shoulder.get('y', 0) - right_shoulder.get('y', 0))
+                shoulder_score = 1.0 - min(1.0, shoulder_diff * 5)
+                
+                # Check hip alignment
+                hip_diff = abs(left_hip.get('y', 0) - right_hip.get('y', 0))
+                hip_score = 1.0 - min(1.0, hip_diff * 5)
+                
+                # Check vertical alignment (shoulders above hips)
+                shoulder_y = (left_shoulder.get('y', 0) + right_shoulder.get('y', 0)) / 2
+                hip_y = (left_hip.get('y', 0) + right_hip.get('y', 0)) / 2
+                vertical_score = 1.0 if shoulder_y < hip_y else 0.5
+                
+                posture_score = (shoulder_score * 0.4 + hip_score * 0.3 + vertical_score * 0.3)
+                posture_score = max(0.3, min(1.0, posture_score))
+            
+            # ===== GESTURES =====
+            gesture_score = 0.5
+            if left_wrist and right_wrist and left_shoulder and right_shoulder:
+                # Check if hands are visible and moving (not at sides)
+                left_wrist_y = left_wrist.get('y', 1)
+                right_wrist_y = right_wrist.get('y', 1)
+                left_shoulder_y = left_shoulder.get('y', 0)
+                right_shoulder_y = right_shoulder.get('y', 0)
+                
+                # Hands above hip level indicates active gesturing
+                # Lower y value = higher in frame
+                left_active = left_wrist_y < left_shoulder_y + 0.2
+                right_active = right_wrist_y < right_shoulder_y + 0.2
+                
+                # Check visibility
+                left_vis = left_wrist.get('visibility', 0)
+                right_vis = right_wrist.get('visibility', 0)
+                
+                activity = (1 if left_active else 0) + (1 if right_active else 0)
+                visibility = (left_vis + right_vis) / 2
+                
+                gesture_score = (activity * 0.25 + visibility * 0.5 + 0.25)
+                gesture_score = max(0.3, min(1.0, gesture_score))
+            
+            # ===== EMOTION/ENGAGEMENT =====
+            # Based on overall body language
+            emotion_score = 0.5
+            if nose:
+                # Face visibility indicates engagement
+                nose_vis = nose.get('visibility', 0)
+                emotion_score = max(0.4, min(1.0, nose_vis + 0.2))
+            
+            # Calculate overall
+            overall_score = (eye_contact_score + posture_score + gesture_score + emotion_score) / 4
+            
+            # Store scores for averaging
+            if client_id in self.analyzers:
+                analyzer = self.analyzers[client_id]
+                analyzer.session_data['eye_contact_scores'].append(eye_contact_score)
+                analyzer.session_data['posture_scores'].append(posture_score)
+                analyzer.session_data['gesture_scores'].append(gesture_score)
+                analyzer.session_data['emotion_scores'].append(emotion_score)
+                
+                # Limit history
+                for key in ['eye_contact_scores', 'posture_scores', 'gesture_scores', 'emotion_scores']:
+                    if len(analyzer.session_data[key]) > 10:
+                        analyzer.session_data[key].pop(0)
+            
+            return {
+                'eye_contact': eye_contact_score,
+                'posture': posture_score,
+                'gesture': gesture_score,
+                'emotion': emotion_score,
+                'overall': overall_score
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating landmark metrics: {str(e)}")
+            return self._get_default_scores()
+    
+    def _get_default_scores(self) -> dict:
+        """Return default scores when calculation fails"""
+        return {
+            'eye_contact': 0.5,
+            'posture': 0.5,
+            'gesture': 0.5,
+            'emotion': 0.5,
+            'overall': 0.5
+        }
+
     async def handle_audio_chunk(self, client_id: str, data: dict):
         """Handle incoming audio chunk"""
         try:

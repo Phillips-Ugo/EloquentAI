@@ -2200,21 +2200,24 @@ const AdvancedRealTimeAnalysis = () => {
 
             // Throttle WebSocket sends to reduce network load (send every 5th frame)
             const timeSinceLastSend = now - lastWebSocketSendRef.current;
-            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && results.landmarks && timeSinceLastSend > 200) {
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && results.landmarks && results.landmarks.length > 0 && timeSinceLastSend > 200) {
               lastWebSocketSendRef.current = now;
-              // Send landmarks data (much smaller than full frame)
-              sendMessage({
-                type: 'video_data',
-                landmarks: results.landmarks.map(landmark => ({
-                  x: landmark.x,
-                  y: landmark.y,
-                  z: landmark.z,
-                  visibility: landmark.visibility
-                })),
-                width: video.videoWidth || 1280,
-                height: video.videoHeight || 720,
-                timestamp: Date.now()
-              });
+              // Send first person's landmarks (results.landmarks[0] contains 33 landmarks for first detected person)
+              const personLandmarks = results.landmarks[0];
+              if (personLandmarks && personLandmarks.length > 0) {
+                sendMessage({
+                  type: 'video_data',
+                  landmarks: personLandmarks.map(landmark => ({
+                    x: landmark.x,
+                    y: landmark.y,
+                    z: landmark.z,
+                    visibility: landmark.visibility
+                  })),
+                  width: video.videoWidth || 1280,
+                  height: video.videoHeight || 720,
+                  timestamp: Date.now()
+                });
+              }
             }
           }
 
