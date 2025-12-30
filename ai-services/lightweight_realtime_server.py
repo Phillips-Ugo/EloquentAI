@@ -31,13 +31,15 @@ class LightweightAnalyzer:
         # Hardcoded Gemini API key - REPLACE WITH YOUR ACTUAL GEMINI API KEY
         self.gemini_api_key = gemini_api_key or "YOUR_GEMINI_API_KEY_HERE"
         self.gemini_model = None
-        if self.gemini_api_key:
+        if self.gemini_api_key and self.gemini_api_key.strip():
             try:
                 genai.configure(api_key=self.gemini_api_key)
-                self.gemini_model = genai.GenerativeModel('gemini-pro')
+                self.gemini_model = genai.GenerativeModel('gemini-2.0-flash')
                 logger.info("Gemini model initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize Gemini client: {str(e)}")
+        else:
+            logger.info("No Gemini API key provided - using rule-based feedback")
         
         self.session_data = {
             'start_time': time.time(),
@@ -402,7 +404,7 @@ class LightweightRealTimeServer:
         self.running = False
         
         # Hardcoded Gemini API key - REPLACE WITH YOUR ACTUAL GEMINI API KEY
-        self.gemini_api_key = "YOUR_GEMINI_API_KEY_HERE"
+        self.gemini_api_key = os.environ.get("GEMINI_API_KEY", "")
         
     async def start(self):
         """Start the WebSocket server"""
