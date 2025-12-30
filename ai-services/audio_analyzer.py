@@ -34,7 +34,16 @@ class AudioAnalyzer:
         Analyze an audio file and return comprehensive results
         """
         try:
+            # Normalize path for Windows compatibility
+            audio_file_path = os.path.normpath(os.path.abspath(audio_file_path))
             logger.info(f"Starting analysis of audio file: {audio_file_path}")
+            logger.info(f"Path is absolute: {os.path.isabs(audio_file_path)}")
+            logger.info(f"Path exists: {os.path.exists(audio_file_path)}")
+            logger.info(f"Current working directory: {os.getcwd()}")
+            
+            if not os.path.exists(audio_file_path):
+                logger.error(f"Audio file does not exist at: {audio_file_path}")
+                raise FileNotFoundError(f"Audio file not found: {audio_file_path}")
             
             # Handle video files by extracting audio
             if audio_file_path.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
@@ -423,8 +432,19 @@ def main():
         request = json.loads(input_data)
         
         audio_file_path = request.get('audio_file_path')
-        if not audio_file_path or not os.path.exists(audio_file_path):
-            raise ValueError("Invalid audio file path")
+        if not audio_file_path:
+            raise ValueError("No audio file path provided")
+        
+        # Normalize path for Windows compatibility
+        audio_file_path = os.path.normpath(os.path.abspath(audio_file_path))
+        logger.info(f"Received audio file path: {audio_file_path}")
+        logger.info(f"Path is absolute: {os.path.isabs(audio_file_path)}")
+        logger.info(f"Path exists: {os.path.exists(audio_file_path)}")
+        logger.info(f"Current working directory: {os.getcwd()}")
+        
+        if not os.path.exists(audio_file_path):
+            logger.error(f"Audio file does not exist at: {audio_file_path}")
+            raise ValueError(f"Invalid audio file path: {audio_file_path}")
         
         # Initialize analyzer and perform analysis
         analyzer = AudioAnalyzer()

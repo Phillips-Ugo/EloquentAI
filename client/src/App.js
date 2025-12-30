@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AuthProvider } from './contexts/AuthContext';
 import './App.css';
 import './styles/world-class.css';
 
@@ -16,15 +17,18 @@ import RealTimeVideoAnalysis from './components/RealTimeVideoAnalysis';
 import RealtimeAnalysisPage from './pages/RealtimeAnalysisPage';
 import PricingPage from './pages/PricingPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
+import SignInPage from './pages/SignInPage';
+import SignUpPage from './pages/SignUpPage';
 
 
 function App() {
   return (
-    <Router>
-      <div className="App min-h-screen bg-white">
-        <ConsumerHeader />
-        
-        <main>
+    <AuthProvider>
+      <Router>
+        <div className="App min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50">
+          <ConsumerHeader />
+          
+          <main>
           <AnimatePresence mode="wait">
             <Routes>
               <Route 
@@ -144,14 +148,54 @@ function App() {
                   </motion.div>
                 } 
               />
+              <Route 
+                path="/signin" 
+                element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <SignInPage />
+                  </motion.div>
+                } 
+              />
+              <Route 
+                path="/signup" 
+                element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <SignUpPage />
+                  </motion.div>
+                } 
+              />
+              <Route 
+                path="/login" 
+                element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <SignInPage />
+                  </motion.div>
+                } 
+              />
 
             </Routes>
           </AnimatePresence>
         </main>
         
-        <ConsumerFooter />
-      </div>
-    </Router>
+          <ConsumerFooter />
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

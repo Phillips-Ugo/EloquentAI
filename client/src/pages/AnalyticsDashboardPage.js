@@ -25,7 +25,7 @@ const AnalyticsDashboardPage = () => {
   const [timeRange, setTimeRange] = useState('7d');
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50">
       {/* Hero Section */}
       <section className="pt-20 pb-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -1,6 +1,6 @@
 """
 Analysis API routes
-Handles getting analysis results by ID
+Handles getting analysis results by ID and starting analysis
 """
 
 from fastapi import APIRouter, HTTPException
@@ -9,10 +9,14 @@ import logging
 import os
 import json
 from pathlib import Path
+import httpx
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Node.js server URL for analysis
+NODE_SERVER_URL = os.getenv("NODE_SERVER_URL", "http://localhost:5001")
 
 # Path to sessions directory (should match Node.js server location)
 # Try multiple possible paths
@@ -40,6 +44,46 @@ def get_sessions_dir():
     return default_path
 
 SESSIONS_DIR = get_sessions_dir()
+
+@router.post("/{analysis_id}")
+async def start_analysis(analysis_id: str) -> Dict[str, Any]:
+    """
+    Start analysis for an uploaded file
+    
+    - **analysis_id**: The analysis session ID
+    
+    Returns:
+    - Analysis results including status, type, and results data
+    """
+    try:
+        # Proxy the request to Node.js server which handles the actual analysis
+        async with httpx.AsyncClient(timeout=600.0) as client:
+            try:
+                response = await client.post(
+                    f"{NODE_SERVER_URL}/api/analysis/{analysis_id}"
+                )
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                logger.error(f"Node.js server error: {e.response.status_code} - {e.response.text}")
+                raise HTTPException(
+                    status_code=e.response.status_code,
+                    detail=f"Analysis failed: {e.response.text}"
+                )
+            except httpx.RequestError as e:
+                logger.error(f"Failed to connect to Node.js server: {e}")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Analysis service is unavailable. Please ensure the Node.js server is running on port 5001."
+                )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting analysis for {analysis_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start analysis: {str(e)}"
+        )
 
 @router.get("/{analysis_id}")
 async def get_analysis_results(analysis_id: str) -> Dict[str, Any]:

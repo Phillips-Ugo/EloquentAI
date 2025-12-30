@@ -47,7 +47,7 @@ const UploadPage = () => {
       title: 'Text Analysis',
       description: 'Analyze written content for communication insights',
       icon: Type,
-      color: 'from-green-500 to-green-600',
+      color: 'from-orange-500 to-pink-500',
       features: ['Speech scripts', 'Presentation content', 'Written communication']
     }
   ];
@@ -137,8 +137,33 @@ const UploadPage = () => {
     } catch (err) {
       console.error('Upload error:', err);
       console.error('Error response data:', err.response?.data);
-      console.error('Error detail:', err.response?.data?.detail || err.response?.data?.message);
-      setError(err.response?.data?.detail || err.response?.data?.message || 'Upload failed. Please try again.');
+      
+      // Handle different error response formats
+      let errorMessage = 'Upload failed. Please try again.';
+      
+      if (err.response?.data) {
+        const errorData = err.response.data;
+        
+        // Handle FastAPI validation errors (array of error objects)
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+        }
+        // Handle string error detail
+        else if (typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail;
+        }
+        // Handle object error detail
+        else if (errorData.detail && typeof errorData.detail === 'object') {
+          errorMessage = errorData.detail.msg || errorData.detail.message || JSON.stringify(errorData.detail);
+        }
+        // Handle message field
+        else if (errorData.message) {
+          errorMessage = typeof errorData.message === 'string' ? errorData.message : JSON.stringify(errorData.message);
+        }
+      }
+      
+      console.error('Error detail:', errorMessage);
+      setError(errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -222,7 +247,7 @@ const UploadPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50">
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Header Section */}
         <motion.div
@@ -362,8 +387,8 @@ const UploadPage = () => {
                 className="bg-white rounded-2xl p-8 shadow-lg"
               >
                 <div className="mb-6">
-                  <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-4">
-                    <Type className="w-10 h-10 text-green-500" />
+                  <div className="w-20 h-20 mx-auto rounded-full bg-orange-100 flex items-center justify-center mb-4">
+                    <Type className="w-10 h-10 text-orange-500" />
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">Text Analysis</h3>
                   <p className="text-lg text-gray-600 text-center mb-6">

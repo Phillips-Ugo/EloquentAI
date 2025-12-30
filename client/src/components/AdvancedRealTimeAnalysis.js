@@ -166,6 +166,63 @@ const AdvancedRealTimeAnalysis = () => {
   // Handle WebSocket messages - memoized with empty deps, use functional updates for state
   const handleWebSocketMessage = useCallback((data) => {
     switch (data.type) {
+      case 'analysis_result':
+        // Handle comprehensive analysis results from WebSocket server
+        if (data.result) {
+          const result = data.result;
+          
+          // Update video metrics with scores
+          if (result.scores) {
+            setVideoMetrics(prev => ({
+              ...prev,
+              eyeContact: Math.round((result.scores.eye_contact || 0) * 100),
+              posture: Math.round((result.scores.posture || 0) * 100),
+              gestures: Math.round((result.scores.gesture || 0) * 100),
+              engagement: Math.round((result.scores.overall || 0) * 100),
+              facialExpressions: {
+                ...prev.facialExpressions,
+                happy: Math.round((result.scores.emotion || 0) * 100)
+              }
+            }));
+          }
+          
+          // Update speech metrics if transcription is available
+          if (result.transcription && result.transcription.text) {
+            setSpeechMetrics(prev => ({
+              ...prev,
+              confidence: result.transcription.confidence || prev.confidence
+            }));
+          }
+          
+          // Add feedback/recommendations
+          if (result.feedback && result.feedback.feedback) {
+            const feedbackText = result.feedback.feedback;
+            if (feedbackText && feedbackText.trim() && feedbackText !== 'Starting analysis...') {
+              setLiveFeedback(prev => {
+                // Avoid duplicates
+                const lastFeedback = prev[0];
+                if (lastFeedback && lastFeedback === feedbackText) {
+                  return prev;
+                }
+                return [feedbackText, ...prev.slice(0, 9)]; // Keep last 10
+              });
+              
+              // Add to feedback history
+              setFeedbackHistory(prev => [{
+                timestamp: data.timestamp || Date.now(),
+                feedback: feedbackText,
+                metrics: result.scores || {}
+              }, ...prev.slice(0, 19)]); // Keep last 20
+            }
+          }
+          
+          console.log('✅ Analysis result received:', {
+            scores: result.scores,
+            hasFeedback: !!(result.feedback && result.feedback.feedback),
+            hasTranscription: !!(result.transcription && result.transcription.text)
+          });
+        }
+        break;
       case 'speech_metrics':
         setSpeechMetrics(data.metrics);
         break;
@@ -182,6 +239,9 @@ const AdvancedRealTimeAnalysis = () => {
         break;
       case 'session_summary':
         setSessionSummary(data.summary);
+        break;
+      case 'session_started':
+        console.log('✅ Session started:', data);
         break;
       default:
         console.log('📨 Received message:', data);
@@ -1990,7 +2050,7 @@ const AdvancedRealTimeAnalysis = () => {
   }, [audioEnabled, videoEnabled, setupAudioAnalysis, setupVideoAnalysis, checkCameraPermissions]);
 
   const lastVideoTimeRef = useRef(-1);
-  const frameTimestampRef = useRef(0); // MediaPipe requires strictly increasing timestamps
+  const frameTimestampRef = useRef(1); // MediaPipe requires strictly increasing timestamps starting from 1
   const mediaPipeErrorCountRef = useRef(0);
   const lastFrameTimeRef = useRef(0);
   const lastWebSocketSendRef = useRef(0);
@@ -2070,8 +2130,32 @@ const AdvancedRealTimeAnalysis = () => {
         lastFrameTimeRef.current = now;
         
         // Ensure timestamp is strictly monotonically increasing
-        // Use performance.now() for better precision and ensure it's always increasing
-        frameTimestampRef.current = Math.max(frameTimestampRef.current + 1, Math.floor(performance.now() * 1000));
+        // MediaPipe requires timestamps >= 1 and strictly increasing
+        // CRITICAL: Never use 0, always start from 1 and increment
+        let newTimestamp;
+        if (frameTimestampRef.current === 0) {
+          // If somehow we're at 0, start from 1
+          newTimestamp = 1;
+        } else {
+          // Always increment by at least 1, use performance.now() as baseline
+          const perfTimestamp = Math.floor(performance.now() * 1000);
+          newTimestamp = Math.max(
+            frameTimestampRef.current + 1, 
+            perfTimestamp > 0 ? perfTimestamp : frameTimestampRef.current + 1
+          );
+        }
+        // CRITICAL: Ensure timestamp is always >= 1 (MediaPipe requirement)
+        frameTimestampRef.current = Math.max(1, newTimestamp);
+        
+        // Final safety check - never use 0
+        if (frameTimestampRef.current === 0) {
+          frameTimestampRef.current = 1;
+        }
+        
+        // Log timestamp for debugging
+        if (frameTimestampRef.current < 10) {
+          console.log(`📹 Using MediaPipe timestamp: ${frameTimestampRef.current}`);
+        }
         
         try {
           const results = await poseLandmarker.detectForVideo(video, frameTimestampRef.current);
@@ -2156,10 +2240,18 @@ const AdvancedRealTimeAnalysis = () => {
             return;
           }
           
-          // For timestamp errors, try to reset the timestamp counter
+          // For timestamp errors, reset to 1 and recreate PoseLandmarker if needed
           if (detectionError.message && detectionError.message.includes('timestamp')) {
-            console.warn('⚠️ Resetting MediaPipe timestamp counter due to timestamp error');
-            frameTimestampRef.current = Math.floor(performance.now() * 1000);
+            console.warn('⚠️ MediaPipe timestamp error detected, resetting to 1');
+            // Reset to 1 to start fresh
+            frameTimestampRef.current = 1;
+            
+            // If we get multiple timestamp errors, we might need to recreate the PoseLandmarker
+            if (mediaPipeErrorCountRef.current >= 3) {
+              console.warn('⚠️ Multiple timestamp errors, consider recreating PoseLandmarker');
+              // Note: We can't recreate here easily without the vision resolver,
+              // but resetting timestamp should help
+            }
           }
         }
       }
@@ -2272,7 +2364,10 @@ const AdvancedRealTimeAnalysis = () => {
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         // Reset MediaPipe state for new session
-        frameTimestampRef.current = Math.floor(performance.now() * 1000);
+        // CRITICAL: Reset timestamp to 1 to start fresh session
+        // MediaPipe requires timestamps >= 1, so we start at 1 for new sessions
+        frameTimestampRef.current = 1;
+        console.log('🔄 Reset MediaPipe timestamp to 1 for new session');
         mediaPipeErrorCountRef.current = 0;
         lastFrameTimeRef.current = 0;
         lastVideoTimeRef.current = -1;
@@ -2504,37 +2599,35 @@ const AdvancedRealTimeAnalysis = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-white to-transparent">
-      {/* Header */}
-      <div className="glass-header sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 font-heading">Real-Time Analysis</h1>
-                <p className="text-sm text-gray-500 font-medium">AI Communication Coach</p>
-              </div>
+    <div className="min-h-screen bg-[#F8F9FC] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-50/40 via-white to-transparent pt-20">
+      {/* Page Title and Session Info - Below Main Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+              <Brain className="w-6 h-6 text-white" />
             </div>
-            
-            <div className="flex items-center space-x-4">
-              {/* Session Duration */}
-              {sessionStarted && (
-                <div className="flex items-center space-x-2 px-4 py-2 bg-orange-50/50 backdrop-blur-md rounded-full border border-orange-100 shadow-sm">
-                  <Clock className="w-4 h-4 text-orange-600" />
-                  <span className="text-sm font-semibold text-gray-900 font-mono">
-                    {formatDuration(sessionDuration)}
-                  </span>
-                </div>
-              )}
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 font-heading">Real-Time Analysis</h1>
+              <p className="text-sm text-gray-500 font-medium">AI Communication Coach</p>
             </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            {/* Session Duration */}
+            {sessionStarted && (
+              <div className="flex items-center space-x-2 px-4 py-2 bg-orange-50/50 backdrop-blur-md rounded-full border border-orange-100 shadow-sm">
+                <Clock className="w-4 h-4 text-orange-600" />
+                <span className="text-sm font-semibold text-gray-900 font-mono">
+                  {formatDuration(sessionDuration)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-28">
         {/* Tabs */}
         <div className="mb-8">
           <div className="flex space-x-1 bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl p-1 border border-orange-200">

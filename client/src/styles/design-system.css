@@ -1,29 +1,29 @@
 /* EloquentAI Design System - Unified Color Palette and Typography */
 
 :root {
-  /* Primary Brand Colors - Emerald/Teal Theme */
-  --primary-50: #ecfdf5;
-  --primary-100: #d1fae5;
-  --primary-200: #a7f3d0;
-  --primary-300: #6ee7b7;
-  --primary-400: #34d399;
-  --primary-500: #10b981; /* Main brand color - Emerald */
-  --primary-600: #059669;
-  --primary-700: #047857;
-  --primary-800: #065f46;
-  --primary-900: #064e3b;
+  /* Primary Brand Colors - Orange/Pink Theme */
+  --primary-50: #fff7ed;
+  --primary-100: #ffedd5;
+  --primary-200: #fed7aa;
+  --primary-300: #fdba74;
+  --primary-400: #fb923c;
+  --primary-500: #f97316; /* Main brand color - Orange */
+  --primary-600: #ea580c;
+  --primary-700: #c2410c;
+  --primary-800: #9a3412;
+  --primary-900: #7c2d12;
 
-  /* Secondary Colors - Cyan/Teal Theme */
-  --secondary-50: #ecfeff;
-  --secondary-100: #cffafe;
-  --secondary-200: #a5f3fc;
-  --secondary-300: #67e8f9;
-  --secondary-400: #22d3ee;
-  --secondary-500: #06b6d4; /* Cyan */
-  --secondary-600: #0891b2;
-  --secondary-700: #0e7490;
-  --secondary-800: #155e75;
-  --secondary-900: #164e63;
+  /* Secondary Colors - Pink Theme */
+  --secondary-50: #fdf2f8;
+  --secondary-100: #fce7f3;
+  --secondary-200: #fbcfe8;
+  --secondary-300: #f9a8d4;
+  --secondary-400: #f472b6;
+  --secondary-500: #ec4899; /* Pink */
+  --secondary-600: #db2777;
+  --secondary-700: #be185d;
+  --secondary-800: #9f1239;
+  --secondary-900: #831843;
 
   /* Accent Colors - Purple/Violet Theme */
   --accent-50: #faf5ff;
@@ -58,8 +58,8 @@
 
   /* Status Colors */
   --success-50: #ecfdf5;
-  --success-500: #10b981;
-  --success-600: #059669;
+  --success-500: #22c55e; /* Green for success */
+  --success-600: #16a34a;
   --warning-50: #fffbeb;
   --warning-500: #f59e0b;
   --warning-600: #d97706;
@@ -431,7 +431,7 @@ body {
 .form-input:focus {
   border-color: var(--primary-500);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 
 /* Override any inconsistent backgrounds */

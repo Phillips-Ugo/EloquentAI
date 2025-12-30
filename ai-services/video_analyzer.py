@@ -278,13 +278,20 @@ class VideoAnalyzer:
         """
         cap = None
         try:
+            # Normalize path for Windows compatibility
+            video_file_path = os.path.normpath(os.path.abspath(video_file_path))
             logger.info(f"Starting analysis of video file: {video_file_path}")
+            logger.info(f"Path is absolute: {os.path.isabs(video_file_path)}")
+            logger.info(f"Path exists: {os.path.exists(video_file_path)}")
+            logger.info(f"Current working directory: {os.getcwd()}")
             
             # Check if file exists
             if not os.path.exists(video_file_path):
+                logger.error(f"Video file does not exist at: {video_file_path}")
                 raise FileNotFoundError(f"Video file not found: {video_file_path}")
             
             # Open video file
+            logger.info(f"Opening video file with cv2.VideoCapture")
             cap = cv2.VideoCapture(video_file_path)
             if not cap.isOpened():
                 raise ValueError(f"Could not open video file: {video_file_path}")
@@ -905,8 +912,19 @@ def main():
         request = json.loads(input_data)
         
         video_file_path = request.get('video_file_path')
-        if not video_file_path or not os.path.exists(video_file_path):
-            raise ValueError("Invalid video file path")
+        if not video_file_path:
+            raise ValueError("No video file path provided")
+        
+        # Normalize path for Windows compatibility
+        video_file_path = os.path.normpath(os.path.abspath(video_file_path))
+        logger.info(f"Received video file path: {video_file_path}")
+        logger.info(f"Path is absolute: {os.path.isabs(video_file_path)}")
+        logger.info(f"Path exists: {os.path.exists(video_file_path)}")
+        logger.info(f"Current working directory: {os.getcwd()}")
+        
+        if not os.path.exists(video_file_path):
+            logger.error(f"Video file does not exist at: {video_file_path}")
+            raise ValueError(f"Invalid video file path: {video_file_path}")
         
         # Initialize analyzer and perform analysis
         analyzer = VideoAnalyzer()

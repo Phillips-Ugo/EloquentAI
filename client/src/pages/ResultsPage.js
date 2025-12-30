@@ -81,19 +81,19 @@ const ResultsPage = () => {
   }, [fetchResults]);
 
   const getScoreColor = (score) => {
-    if (score >= 0.8) return 'text-emerald-600';
+    if (score >= 0.8) return 'text-orange-600';
     if (score >= 0.6) return 'text-amber-600';
     return 'text-rose-600';
   };
 
   const getScoreBgColor = (score) => {
-    if (score >= 0.8) return 'bg-emerald-50 border-emerald-200';
+    if (score >= 0.8) return 'bg-orange-50 border-orange-200';
     if (score >= 0.6) return 'bg-amber-50 border-amber-200';
     return 'bg-rose-50 border-rose-200';
   };
 
   const getScoreGradient = (score) => {
-    if (score >= 0.8) return 'from-emerald-400 to-emerald-600';
+    if (score >= 0.8) return 'from-orange-400 to-pink-400';
     if (score >= 0.6) return 'from-amber-400 to-amber-600';
     return 'from-rose-400 to-rose-600';
   };
@@ -107,7 +107,7 @@ const ResultsPage = () => {
   };
 
   const getOverallScoreColor = (score) => {
-    if (score >= 0.8) return 'text-emerald-600 bg-emerald-50';
+    if (score >= 0.8) return 'text-orange-600 bg-orange-50';
     if (score >= 0.6) return 'text-amber-600 bg-amber-50';
     return 'text-rose-600 bg-rose-50';
   };
@@ -541,10 +541,10 @@ const ResultsPage = () => {
                 className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6"
               >
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 bg-emerald-100 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-orange-600" />
                   </div>
-                  <h3 className="text-lg font-bold text-emerald-700">Strengths</h3>
+                  <h3 className="text-lg font-bold text-orange-700">Strengths</h3>
                 </div>
                 <div className="space-y-3">
                   {(results.strengths || analysisData.strengths || []).map((strength, index) => (
@@ -553,9 +553,9 @@ const ResultsPage = () => {
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.8 + index * 0.1 }}
-                      className="flex items-start space-x-3 p-3 bg-emerald-50 rounded-lg"
+                      className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg"
                     >
-                      <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0" />
+                      <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0" />
                       <p className="text-gray-700 text-sm leading-relaxed">{strength}</p>
                     </motion.div>
                   ))}

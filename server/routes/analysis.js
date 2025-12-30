@@ -185,10 +185,29 @@ async function performAudioAnalysis(session) {
         timeout: 300000 // 5 minute timeout
       });
 
-      // Send the audio file path to the Python script
-      const audioFilePath = path.join(__dirname, '../uploads', session.filename);
+      // Use absolute path from session if available, otherwise construct relative path
+      const audioFilePath = session.path || path.join(__dirname, '../uploads', session.filename);
+      // Ensure absolute path - CRITICAL: Must be absolute for Python analyzer
+      let absoluteAudioPath;
+      if (audioFilePath && path.isAbsolute(audioFilePath)) {
+        absoluteAudioPath = audioFilePath;
+      } else {
+        absoluteAudioPath = path.resolve(__dirname, '../uploads', session.filename);
+      }
+      
+      // Verify file exists before sending to analyzer
+      const fs = require('fs');
+      if (!fs.existsSync(absoluteAudioPath)) {
+        console.error(`ERROR: Audio file does not exist at path: ${absoluteAudioPath}`);
+        console.error(`Session path: ${session.path}`);
+        console.error(`Session filename: ${session.filename}`);
+        throw new Error(`Audio file not found at: ${absoluteAudioPath}`);
+      }
+      
+      console.log(`Using audio file path: ${absoluteAudioPath}`);
+      console.log(`File exists: ${fs.existsSync(absoluteAudioPath)}`);
       pythonProcess.stdin.write(JSON.stringify({
-        audio_file_path: audioFilePath
+        audio_file_path: absoluteAudioPath
       }));
       pythonProcess.stdin.end();
 
@@ -569,13 +588,31 @@ async function performVideoAnalysis(session) {
         timeout: 300000 // 5 minute timeout
       });
 
-      // Send the video file path to the Python script
-      const videoFilePath = path.join(__dirname, '../uploads', session.filename);
+      // Use absolute path from session if available, otherwise construct relative path
+      const videoFilePath = session.path || path.join(__dirname, '../uploads', session.filename);
+      // Ensure absolute path - CRITICAL: Must be absolute for Python analyzer
+      let absoluteVideoPath;
+      if (videoFilePath && path.isAbsolute(videoFilePath)) {
+        absoluteVideoPath = videoFilePath;
+      } else {
+        absoluteVideoPath = path.resolve(__dirname, '../uploads', session.filename);
+      }
+      
+      // Verify file exists before sending to analyzer
+      const fs = require('fs');
+      if (!fs.existsSync(absoluteVideoPath)) {
+        console.error(`ERROR: Video file does not exist at path: ${absoluteVideoPath}`);
+        console.error(`Session path: ${session.path}`);
+        console.error(`Session filename: ${session.filename}`);
+        throw new Error(`Video file not found at: ${absoluteVideoPath}`);
+      }
+      
       const inputData = JSON.stringify({
-        video_file_path: videoFilePath
+        video_file_path: absoluteVideoPath
       });
       
-      console.log(`Sending video file path to analyzer: ${videoFilePath}`);
+      console.log(`Sending video file path to analyzer: ${absoluteVideoPath}`);
+      console.log(`File exists: ${fs.existsSync(absoluteVideoPath)}`);
       pythonProcess.stdin.write(inputData);
       pythonProcess.stdin.end();
 
