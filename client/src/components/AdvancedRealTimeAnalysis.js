@@ -524,7 +524,8 @@ const AdvancedRealTimeAnalysis = () => {
         const scriptNode = audioContextRef.current.createScriptProcessor(4096, 1, 1);
 
         scriptNode.onaudioprocess = (audioProcessingEvent) => {
-          if (!isAnalyzing || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          // Use ref to avoid stale closure issues with isAnalyzing state
+          if (!isAnalyzingRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             return;
           }
 
@@ -560,7 +561,8 @@ const AdvancedRealTimeAnalysis = () => {
         console.warn('⚠️ AudioWorklet not supported, using ScriptProcessor');
         const scriptNode = audioContextRef.current.createScriptProcessor(4096, 1, 1);
         scriptNode.onaudioprocess = (audioProcessingEvent) => {
-          if (!isAnalyzing || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          // Use ref to avoid stale closure issues with isAnalyzing state
+          if (!isAnalyzingRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             return;
           }
           try {
