@@ -462,6 +462,9 @@ class LightweightRealTimeServer:
                 await self.handle_video_data(websocket, client_id, data)
             elif message_type == 'audio_chunk':
                 await self.handle_audio_chunk(client_id, data)
+            elif message_type == 'audio_data':
+                # Handle audio data from frontend (JSON array format)
+                await self.handle_audio_data(websocket, client_id, data)
             elif message_type == 'stop_session':
                 await self.handle_stop_session(websocket, client_id)
             elif message_type == 'ping':
@@ -711,6 +714,220 @@ class LightweightRealTimeServer:
             'emotion': 0.5,
             'overall': 0.5
         }
+
+    async def handle_audio_data(self, websocket, client_id: str, data: dict):
+        """Handle audio data from frontend (JSON array format) - calculate speech metrics"""
+        try:
+            audio_array = data.get('data', [])
+            sample_rate = data.get('sampleRate', 16000)
+            
+            if not audio_array or len(audio_array) < 100:
+                return
+            
+            # Convert to numpy array
+            audio_np = np.array(audio_array, dtype=np.float32)
+            
+            # Initialize session if needed
+            if client_id not in self.client_sessions:
+                await self.handle_start_session(websocket, client_id, {'session_id': str(uuid.uuid4())})
+            
+            session = self.client_sessions.get(client_id)
+            if not session:
+                return
+            
+            session['audio_chunks'] = session.get('audio_chunks', 0) + 1
+            
+            # Store audio for aggregation
+            if 'audio_buffer' not in session:
+                session['audio_buffer'] = []
+            session['audio_buffer'].append(audio_np)
+            
+            # Keep only last 3 seconds of audio (at 16kHz, that's ~48000 samples)
+            if len(session['audio_buffer']) > 30:
+                session['audio_buffer'].pop(0)
+            
+            # Calculate speech metrics from audio
+            speech_metrics = self._calculate_speech_metrics(audio_np, sample_rate)
+            
+            # Store metrics for averaging
+            if 'speech_metrics_history' not in session:
+                session['speech_metrics_history'] = []
+            session['speech_metrics_history'].append(speech_metrics)
+            if len(session['speech_metrics_history']) > 10:
+                session['speech_metrics_history'].pop(0)
+            
+            # Calculate average metrics
+            avg_metrics = self._average_speech_metrics(session['speech_metrics_history'])
+            
+            # Send speech metrics to client
+            await websocket.send(json.dumps({
+                'type': 'speech_metrics',
+                'metrics': avg_metrics,
+                'timestamp': time.time()
+            }))
+            
+            logger.debug(f"Processed audio from client {client_id}: metrics={avg_metrics}")
+            
+        except Exception as e:
+            logger.error(f"Error processing audio data for client {client_id}: {str(e)}")
+    
+    def _calculate_speech_metrics(self, audio: np.ndarray, sample_rate: int) -> dict:
+        """Calculate speech metrics from audio data"""
+        try:
+            # ===== VOLUME (RMS) =====
+            rms = np.sqrt(np.mean(audio ** 2))
+            # Normalize to 0-1 range (typical speech RMS is 0.01-0.3)
+            volume_score = min(1.0, rms * 5)  # Scale up for better visibility
+            
+            # ===== CLARITY (based on signal variance and zero-crossing rate) =====
+            # Higher variance and consistent zero-crossing indicates clear speech
+            variance = np.var(audio)
+            
+            # Zero-crossing rate (indicator of speech presence)
+            zero_crossings = np.sum(np.abs(np.diff(np.sign(audio)))) / 2
+            zcr = zero_crossings / len(audio)
+            
+            # Speech typically has ZCR between 0.02 and 0.15
+            # Too low = silence, too high = noise
+            if zcr < 0.01:
+                clarity_score = 0.2  # Silence
+            elif zcr < 0.02:
+                clarity_score = 0.4  # Very quiet
+            elif zcr > 0.2:
+                clarity_score = 0.5  # Noisy
+            else:
+                # Good speech range - scale based on variance
+                clarity_score = 0.5 + min(0.5, variance * 50)
+            
+            clarity_score = max(0.1, min(1.0, clarity_score))
+            
+            # ===== PACE (based on energy variation) =====
+            # Calculate energy in short windows
+            window_size = int(sample_rate * 0.05)  # 50ms windows
+            if len(audio) >= window_size:
+                n_windows = len(audio) // window_size
+                if n_windows > 0:
+                    windows = audio[:n_windows * window_size].reshape(n_windows, window_size)
+                    window_energies = np.sqrt(np.mean(windows ** 2, axis=1))
+                    
+                    # Count energy transitions (syllables/words)
+                    threshold = np.mean(window_energies) * 0.5
+                    above_threshold = window_energies > threshold
+                    transitions = np.sum(np.abs(np.diff(above_threshold.astype(int))))
+                    
+                    # Normal speech pace: 3-6 syllables per second
+                    duration_seconds = len(audio) / sample_rate
+                    syllables_per_second = transitions / (2 * duration_seconds) if duration_seconds > 0 else 0
+                    
+                    # Score based on ideal pace (4-5 syllables/second)
+                    if syllables_per_second < 1:
+                        pace_score = 0.3  # Too slow/quiet
+                    elif syllables_per_second < 3:
+                        pace_score = 0.5  # Slow
+                    elif syllables_per_second <= 6:
+                        pace_score = 0.7 + (syllables_per_second - 3) * 0.1  # Good range
+                    else:
+                        pace_score = max(0.4, 1.0 - (syllables_per_second - 6) * 0.1)  # Too fast
+                else:
+                    pace_score = 0.5
+            else:
+                pace_score = 0.5
+            
+            pace_score = max(0.1, min(1.0, pace_score))
+            
+            # ===== PITCH VARIATION (using autocorrelation) =====
+            # Higher variation indicates more engaging speech
+            if len(audio) > 1024:
+                # Simple pitch variation estimate based on signal dynamics
+                audio_diff = np.abs(np.diff(audio))
+                pitch_variation = np.std(audio_diff) / (np.mean(np.abs(audio)) + 1e-6)
+                pitch_score = min(1.0, pitch_variation * 3)
+            else:
+                pitch_score = 0.5
+            
+            pitch_score = max(0.1, min(1.0, pitch_score))
+            
+            # ===== IS SPEAKING? =====
+            is_speaking = rms > 0.01 and zcr > 0.02
+            
+            return {
+                'clarity': clarity_score,
+                'pace': pace_score,
+                'volume': volume_score,
+                'pitch': pitch_score,
+                'is_speaking': is_speaking,
+                'rms': float(rms),
+                'zcr': float(zcr)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating speech metrics: {str(e)}")
+            return {
+                'clarity': 0.5,
+                'pace': 0.5,
+                'volume': 0.5,
+                'pitch': 0.5,
+                'is_speaking': False,
+                'rms': 0.0,
+                'zcr': 0.0
+            }
+    
+    def _average_speech_metrics(self, history: list) -> dict:
+        """Calculate average speech metrics from history - returns frontend-compatible format"""
+        if not history:
+            return {
+                'clarity': 50,  # Percentage
+                'pace': 140,    # WPM (words per minute)
+                'volume': 50,   # Percentage
+                'pitch': 50,    # Percentage
+                'fillerWords': 0,
+                'confidence': 50,
+                'sentiment': 'neutral',
+                'is_speaking': False
+            }
+        
+        try:
+            # Calculate averages (0-1 scale)
+            avg_clarity = np.mean([m['clarity'] for m in history])
+            avg_pace = np.mean([m['pace'] for m in history])
+            avg_volume = np.mean([m['volume'] for m in history])
+            avg_pitch = np.mean([m['pitch'] for m in history])
+            is_speaking = any(m.get('is_speaking', False) for m in history[-3:])
+            
+            # Convert to frontend-expected format
+            # Pace: 0-1 score to WPM (80-200 range)
+            pace_wpm = 80 + (avg_pace * 120)  # Maps 0-1 to 80-200 WPM
+            
+            # Determine sentiment based on pitch and clarity
+            if avg_clarity > 0.7 and avg_pitch > 0.5:
+                sentiment = 'positive'
+            elif avg_clarity < 0.4:
+                sentiment = 'neutral'
+            else:
+                sentiment = 'neutral'
+            
+            return {
+                'clarity': round(avg_clarity * 100),       # Percentage 0-100
+                'pace': round(pace_wpm),                   # WPM
+                'volume': round(avg_volume * 100),         # Percentage 0-100
+                'pitch': round(avg_pitch * 100),           # Percentage 0-100
+                'fillerWords': 0,                          # Not detected yet
+                'confidence': round((avg_clarity + avg_volume) / 2 * 100),  # Combined metric
+                'sentiment': sentiment,
+                'is_speaking': is_speaking
+            }
+        except Exception as e:
+            logger.error(f"Error averaging speech metrics: {str(e)}")
+            return {
+                'clarity': 50,
+                'pace': 140,
+                'volume': 50,
+                'pitch': 50,
+                'fillerWords': 0,
+                'confidence': 50,
+                'sentiment': 'neutral',
+                'is_speaking': False
+            }
 
     async def handle_audio_chunk(self, client_id: str, data: dict):
         """Handle incoming audio chunk"""
