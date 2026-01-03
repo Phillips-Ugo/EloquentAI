@@ -1,193 +1,129 @@
 const express = require('express');
-const axios = require('axios');
+const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs-extra');
 
 const router = express.Router();
 
-// Health check endpoint
+// Basic health check
 router.get('/', async (req, res) => {
   try {
-    const healthStatus = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      services: {
-        server: 'running',
-        speech_service: 'unknown',
-        video_service: 'unknown'
-      }
-    };
-
-    // Check Python services
-    try {
-      await axios.get('http://localhost:8001/health', { timeout: 2000 });
-      healthStatus.services.speech_service = 'running';
-    } catch (error) {
-      healthStatus.services.speech_service = 'stopped';
-    }
-
-    try {
-      await axios.get('http://localhost:8002/health', { timeout: 2000 });
-      healthStatus.services.video_service = 'running';
-    } catch (error) {
-      healthStatus.services.video_service = 'stopped';
-    }
-
-    // Check disk space
-    const uploadsDir = path.join(__dirname, '../uploads');
-    const sessionsDir = path.join(__dirname, '../sessions');
-    
-    try {
-      await fs.ensureDir(uploadsDir);
-      await fs.ensureDir(sessionsDir);
-      healthStatus.storage = {
-        uploads_dir: 'accessible',
-        sessions_dir: 'accessible'
-      };
-    } catch (error) {
-      healthStatus.storage = {
-        uploads_dir: 'error',
-        sessions_dir: 'error'
-      };
-      healthStatus.status = 'degraded';
-    }
-
     res.json({
       success: true,
-      data: healthStatus
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      service: 'Eloquent AI Backend'
     });
-
   } catch (error) {
-    console.error('Health check error:', error);
     res.status(500).json({
       success: false,
-      message: 'Health check failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      status: 'unhealthy',
+      error: error.message
     });
   }
 });
 
-// Detailed health check
+// Detailed health check including Python verification
 router.get('/detailed', async (req, res) => {
   try {
-    const detailedHealth = {
+    const health = {
+      success: true,
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      environment: process.env.NODE_ENV || 'development',
-      node_version: process.version,
-      platform: process.platform,
-      services: {},
-      storage: {},
-      statistics: {}
+      service: 'Eloquent AI Backend',
+      checks: {}
     };
 
-    // Check Python services with detailed info
-    const services = [
-      { name: 'speech_service', port: 8001 },
-      { name: 'video_service', port: 8002 }
-    ];
-
-    for (const service of services) {
-      try {
-        const response = await axios.get(`http://localhost:${service.port}/health`, { timeout: 2000 });
-        detailedHealth.services[service.name] = {
-          status: 'running',
-          port: service.port,
-          details: response.data
-        };
-      } catch (error) {
-        detailedHealth.services[service.name] = {
-          status: 'stopped',
-          port: service.port,
-          error: error.message
-        };
-        detailedHealth.status = 'degraded';
-      }
-    }
-
-    // Check storage and get statistics
-    const uploadsDir = path.join(__dirname, '../uploads');
-    const sessionsDir = path.join(__dirname, '../sessions');
-    
+    // Check Python availability
     try {
-      await fs.ensureDir(uploadsDir);
-      await fs.ensureDir(sessionsDir);
-      
-      const uploadFiles = await fs.readdir(uploadsDir);
-      const sessionFiles = await fs.readdir(sessionsDir);
-      
-      detailedHealth.storage = {
-        uploads_dir: {
-          status: 'accessible',
-          path: uploadsDir,
-          file_count: uploadFiles.length
-        },
-        sessions_dir: {
-          status: 'accessible',
-          path: sessionsDir,
-          file_count: sessionFiles.length
-        }
+      const pythonCmd = process.env.PYTHON_CMD || 'python3';
+      const pythonCheck = await new Promise((resolve, reject) => {
+        const proc = spawn(pythonCmd, ['--version']);
+        let output = '';
+        proc.stdout.on('data', (data) => output += data.toString());
+        proc.on('close', (code) => {
+          if (code === 0) resolve(output.trim());
+          else reject(new Error(`Python check failed with code ${code}`));
+        });
+        proc.on('error', reject);
+      });
+      health.checks.python = {
+        available: true,
+        version: pythonCheck,
+        command: pythonCmd
       };
-
-      // Get session statistics
-      let completedSessions = 0;
-      let failedSessions = 0;
-      let processingSessions = 0;
-
-      for (const sessionFile of sessionFiles) {
-        if (sessionFile.endsWith('.json')) {
-          try {
-            const session = await fs.readJson(path.join(sessionsDir, sessionFile));
-            switch (session.status) {
-              case 'completed':
-                completedSessions++;
-                break;
-              case 'failed':
-                failedSessions++;
-                break;
-              case 'processing':
-                processingSessions++;
-                break;
-            }
-          } catch (error) {
-            console.error(`Error reading session file ${sessionFile}:`, error);
-          }
-        }
-      }
-
-      detailedHealth.statistics = {
-        total_sessions: sessionFiles.length,
-        completed_sessions: completedSessions,
-        failed_sessions: failedSessions,
-        processing_sessions: processingSessions,
-        success_rate: sessionFiles.length > 0 ? (completedSessions / sessionFiles.length * 100).toFixed(2) + '%' : '0%'
-      };
-
     } catch (error) {
-      detailedHealth.storage = {
-        uploads_dir: { status: 'error', error: error.message },
-        sessions_dir: { status: 'error', error: error.message }
+      health.checks.python = {
+        available: false,
+        error: error.message
       };
-      detailedHealth.status = 'degraded';
+      health.success = false;
+      health.status = 'degraded';
     }
 
-    res.json({
-      success: true,
-      data: detailedHealth
-    });
+    // Check Python dependencies
+    try {
+      const pythonCmd = process.env.PYTHON_CMD || 'python3';
+      const depsCheck = await new Promise((resolve, reject) => {
+        const proc = spawn(pythonCmd, ['-c', 'import openai; import json; import os; print("OK")']);
+        let errorOutput = '';
+        proc.stderr.on('data', (data) => errorOutput += data.toString());
+        proc.on('close', (code) => {
+          if (code === 0) resolve(true);
+          else reject(new Error(`Dependencies check failed: ${errorOutput}`));
+        });
+        proc.on('error', reject);
+      });
+      health.checks.pythonDependencies = {
+        available: true,
+        openai: true
+      };
+    } catch (error) {
+      health.checks.pythonDependencies = {
+        available: false,
+        error: error.message
+      };
+      health.success = false;
+      health.status = 'degraded';
+    }
 
+    // Check OpenAI API key
+    health.checks.openaiKey = {
+      configured: !!process.env.OPENAI_API_KEY,
+      length: process.env.OPENAI_API_KEY?.length || 0
+    };
+    if (!process.env.OPENAI_API_KEY) {
+      health.success = false;
+      health.status = 'degraded';
+    }
+
+    // Check script files exist
+    const scriptPath = path.join(__dirname, '../../ai-services/text_analyzer.py');
+    health.checks.scripts = {
+      textAnalyzer: await fs.pathExists(scriptPath),
+      path: scriptPath
+    };
+    if (!await fs.pathExists(scriptPath)) {
+      health.success = false;
+      health.status = 'degraded';
+    }
+
+    // Check sessions directory
+    const sessionsDir = path.join(__dirname, '../sessions');
+    health.checks.directories = {
+      sessions: await fs.pathExists(sessionsDir),
+      uploads: await fs.pathExists(path.join(__dirname, '../uploads'))
+    };
+
+    const statusCode = health.success ? 200 : 503;
+    res.status(statusCode).json(health);
   } catch (error) {
-    console.error('Detailed health check error:', error);
     res.status(500).json({
       success: false,
-      message: 'Detailed health check failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      status: 'unhealthy',
+      error: error.message
     });
   }
 });
 
-module.exports = router; 
+module.exports = router;
