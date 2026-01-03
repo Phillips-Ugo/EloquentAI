@@ -7,6 +7,7 @@ import {
   RotateCcw, Download, ChevronRight
 } from 'lucide-react';
 import { PoseLandmarker, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision';
+import { getWebSocketURL } from '../config/api';
 
 const PracticePage = () => {
   // Session state
@@ -48,7 +49,7 @@ const PracticePage = () => {
   const connectWebSocket = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     
-    const ws = new WebSocket('ws://localhost:8765');
+    const ws = new WebSocket(getWebSocketURL('/ws'));
     
     ws.onopen = () => {
       console.log('✅ Connected to analysis server');

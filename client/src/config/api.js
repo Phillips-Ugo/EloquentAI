@@ -3,6 +3,26 @@ import axios from 'axios';
 // API Configuration
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+// WebSocket URL helper - converts HTTP URL to WebSocket URL
+export const getWebSocketURL = (path = '/ws') => {
+  // If custom WebSocket URL is provided, use it
+  if (process.env.REACT_APP_WS_URL) {
+    return `${process.env.REACT_APP_WS_URL}${path}`;
+  }
+  
+  // Otherwise, derive from API URL
+  if (API_BASE_URL) {
+    // Convert http:// to ws:// and https:// to wss://
+    const wsBase = API_BASE_URL
+      .replace(/^http:/, 'ws:')
+      .replace(/^https:/, 'wss:');
+    return `${wsBase}${path}`;
+  }
+  
+  // Fallback for development
+  return `ws://localhost:8765${path}`;
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 600000, // 10 minutes for analysis - TESTING - V3

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getWebSocketURL } from '../config/api';
 import { 
   Mic, 
   MicOff, 
@@ -107,8 +108,7 @@ const CommunicationCoach = () => {
   const connectWebSocket = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = getWebSocketURL('/ws');
     
     wsRef.current = new WebSocket(wsUrl);
 

@@ -54,6 +54,7 @@ import {
   FilesetResolver,
   DrawingUtils
 } from '@mediapipe/tasks-vision';
+import { getWebSocketURL } from '../config/api';
 
 const AdvancedRealTimeAnalysis = () => {
   // Core state
@@ -313,7 +314,7 @@ const AdvancedRealTimeAnalysis = () => {
           wsRef.current = null;
         }
         
-        const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:8765';
+        const wsUrl = getWebSocketURL('/ws');
         console.log(`🔌 Connecting to WebSocket: ${wsUrl}`);
         console.log(`🔌 Session started: ${sessionStarted}`);
         

@@ -13,6 +13,7 @@ import {
   Brain
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import { getWebSocketURL } from '../config/api';
 
 const EnhancedRealTimeAnalysis = () => {
   // Core state only - no notifications
@@ -54,7 +55,7 @@ const EnhancedRealTimeAnalysis = () => {
   const connectWebSocket = useCallback(() => {
     try {
       setConnectionStatus('connecting');
-      const ws = new WebSocket('ws://localhost:8765');
+      const ws = new WebSocket(getWebSocketURL('/ws'));
       
       ws.onopen = () => {
         console.log('WebSocket connected');

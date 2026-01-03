@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getWebSocketURL } from '../config/api';
 
 const RealTimeVideoAnalysis = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -36,7 +37,7 @@ const RealTimeVideoAnalysis = () => {
     
     try {
       console.log('Connecting to WebSocket...');
-      const ws = new WebSocket('ws://localhost:8765');
+      const ws = new WebSocket(getWebSocketURL('/ws'));
       
       ws.onopen = () => {
         console.log('WebSocket connected successfully');
