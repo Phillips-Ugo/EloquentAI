@@ -5,7 +5,11 @@ services:
     env: node
     plan: starter
     region: oregon
-    buildCommand: cd server && npm install
+    buildCommand: |
+      cd server && npm install &&
+      cd ../ai-services && 
+      python3 -m pip install --upgrade pip &&
+      python3 -m pip install -r requirements.txt
     startCommand: cd server && node index.js
     envVars:
       - key: NODE_ENV

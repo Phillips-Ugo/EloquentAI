@@ -1005,19 +1005,28 @@ async function performTextAnalysis(session, analysisType) {
     console.log('Script exists:', scriptExists);
     console.log('Working directory:', path.join(__dirname, '../../ai-services'));
     
-    // If script doesn't exist or we're in production without Python, use fallback
-    if (!scriptExists || process.env.NODE_ENV === 'production') {
-      console.log('Using fallback text analysis (Python not available)');
-      return generateFallbackTextAnalysis(session);
+    // Always try Python first - it should be available in production
+    if (!scriptExists) {
+      console.error('Text analyzer script not found at:', scriptPath);
+      throw new Error('Text analyzer script not found');
     }
     
     // Run the text analyzer as a subprocess
+    // Try python3 first, then python
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn('python', [
+      // Determine Python command
+      const pythonCmd = process.env.PYTHON_CMD || 'python3';
+      
+      const pythonProcess = spawn(pythonCmd, [
         scriptPath
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        cwd: path.join(__dirname, '../../ai-services')
+        cwd: path.join(__dirname, '../../ai-services'),
+        env: {
+          ...process.env,
+          PYTHONPATH: path.join(__dirname, '../../ai-services'),
+          PYTHONUNBUFFERED: '1'
+        }
       });
       
       console.log('Python process started with PID:', pythonProcess.pid);
@@ -1089,8 +1098,69 @@ async function performTextAnalysis(session, analysisType) {
 
       pythonProcess.on('error', (error) => {
         clearTimeout(timeout);
-        console.log('Python process error:', error);
-        reject(new Error(`Failed to start text analysis: ${error.message}`));
+        console.error('Python process error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          cmd: pythonCmd,
+          scriptPath: scriptPath
+        });
+        
+        // If python3 failed, try python as fallback
+        if (pythonCmd === 'python3' && error.code === 'ENOENT') {
+          console.log('python3 not found, trying python...');
+          // Retry with python command
+          const fallbackProcess = spawn('python', [scriptPath], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+            cwd: path.join(__dirname, '../../ai-services'),
+            env: {
+              ...process.env,
+              PYTHONPATH: path.join(__dirname, '../../ai-services'),
+              PYTHONUNBUFFERED: '1'
+            }
+          });
+          
+          // Handle fallback process similarly
+          let fallbackOutput = '';
+          let fallbackError = '';
+          
+          fallbackProcess.stdout.on('data', (data) => {
+            fallbackOutput += data.toString();
+          });
+          
+          fallbackProcess.stderr.on('data', (data) => {
+            fallbackError += data.toString();
+          });
+          
+          fallbackProcess.on('close', (code) => {
+            if (code === 0 && fallbackOutput.trim()) {
+              try {
+                const result = JSON.parse(fallbackOutput);
+                if (result.success) {
+                  resolve(result.data);
+                } else {
+                  reject(new Error(result.error || 'Text analysis failed'));
+                }
+              } catch (parseError) {
+                reject(new Error(`Failed to parse results: ${parseError.message}`));
+              }
+            } else {
+              reject(new Error(`Python analysis failed: ${fallbackError || 'Unknown error'}`));
+            }
+          });
+          
+          // Send input to fallback process
+          const inputData = JSON.stringify({
+            text_content: session.textContent,
+            analysis_type: analysisType
+          });
+          fallbackProcess.stdin.write(inputData);
+          fallbackProcess.stdin.end();
+          
+          return;
+        }
+        
+        reject(new Error(`Failed to start text analysis: ${error.message}. Make sure Python 3 and required packages are installed.`));
       });
     });
   } catch (error) {
