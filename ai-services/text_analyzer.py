@@ -404,10 +404,15 @@ if __name__ == "__main__":
         sys.stderr.flush()
         print(output_json)
         
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as json_error:
+        import traceback
+        error_msg = f"Invalid JSON input: {json_error}"
+        sys.stderr.write(f"ERROR: {error_msg}\n")
+        sys.stderr.write(f"ERROR: Input preview: {input_data[:200] if 'input_data' in locals() else 'N/A'}\n")
+        sys.stderr.flush()
         print(json.dumps({
             "success": False,
-            "error": "Invalid JSON input"
+            "error": error_msg
         }, ensure_ascii=False))
         sys.exit(1)
     except Exception as e:
