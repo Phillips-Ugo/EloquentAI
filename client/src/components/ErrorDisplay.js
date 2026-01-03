@@ -29,3 +29,5 @@ const ErrorDisplay = ({ error, onRetry, title = 'Something went wrong' }) => {
 
 export default ErrorDisplay;
 
+
+

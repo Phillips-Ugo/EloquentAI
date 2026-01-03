@@ -39,14 +39,17 @@ const SignInPage = () => {
     setLoading(true);
 
     try {
-      // For now, we'll use a mock authentication
-      // Replace this with actual API call when backend is ready
+      // Real authentication API call
       const response = await api.post('/auth/login', formData);
       
-      if (response.data.success) {
+      if (response.data && response.data.id) {
         // Use AuthContext to login
-        const userData = response.data.data?.user || { email: formData.email, name: formData.email.split('@')[0] };
-        const token = response.data.data?.token;
+        const userData = {
+          id: response.data.id,
+          email: response.data.email,
+          name: response.data.name
+        };
+        const token = response.data.token;
         login(userData, token);
         
         // Redirect to dashboard or analytics

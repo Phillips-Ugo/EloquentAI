@@ -1,0 +1,21 @@
+services:
+  # Backend API Server
+  - type: web
+    name: eloquent-ai-backend
+    env: node
+    plan: starter
+    region: oregon
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGIN
+        sync: false  # Set this in Render dashboard to your Vercel frontend URL
+      # Add other environment variables in Render dashboard:
+      # - OPENAI_API_KEY
+      # - GOOGLE_API_KEY
+      # - JWT_SECRET
+      # - Any other API keys or secrets your backend needs

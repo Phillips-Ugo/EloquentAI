@@ -61,21 +61,21 @@ const SignUpPage = () => {
     setLoading(true);
 
     try {
-      // For now, we'll use a mock authentication
-      // Replace this with actual API call when backend is ready
+      // Real registration API call
       const response = await api.post('/auth/register', {
         name: formData.name,
         email: formData.email,
         password: formData.password
       });
       
-      if (response.data.success) {
+      if (response.data && response.data.id) {
         // Use AuthContext to login
-        const userData = response.data.data?.user || { 
-          email: formData.email, 
-          name: formData.name 
+        const userData = {
+          id: response.data.id,
+          email: response.data.email,
+          name: response.data.name
         };
-        const token = response.data.data?.token;
+        const token = response.data.token;
         login(userData, token);
         
         // Redirect to dashboard or analytics

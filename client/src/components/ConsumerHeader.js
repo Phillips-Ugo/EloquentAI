@@ -40,19 +40,22 @@ const ConsumerHeader = () => {
 
   const navigationItems = [
     {
-      name: 'Real-Time Analysis',
-      href: '/realtime-analysis',
-      icon: Video
+      name: 'Practice',
+      href: '/practice',
+      icon: Video,
+      description: 'Real-time AI coaching'
     },
     {
-      name: 'Upload File',
+      name: 'Upload',
       href: '/upload',
-      icon: Upload
+      icon: Upload,
+      description: 'Analyze recordings'
     },
     {
-      name: 'Analytics',
-      href: '/analytics',
-      icon: BarChart3
+      name: 'Dashboard',
+      href: '/dashboard',
+      icon: BarChart3,
+      description: 'View your progress'
     }
   ];
 

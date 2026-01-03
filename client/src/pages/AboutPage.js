@@ -26,7 +26,7 @@ const AboutPage = () => {
       icon: Shield,
       title: 'Privacy First',
       description: 'Your data security is our top priority. We never store your content permanently.',
-      color: 'from-green-500 to-emerald-500'
+      color: 'from-orange-500 to-pink-500'
     },
     {
       icon: Lightbulb,
@@ -38,7 +38,7 @@ const AboutPage = () => {
       icon: Globe,
       title: 'Accessibility',
       description: 'Making professional communication coaching available to everyone, everywhere.',
-      color: 'from-blue-500 to-cyan-500'
+      color: 'from-orange-500 to-cyan-500'
     }
   ];
 
@@ -96,7 +96,7 @@ const AboutPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="relative py-20 bg-gradient-to-br from-blue-50 to-purple-50">
+      <section className="relative py-20 bg-gradient-to-br from-orange-50 to-pink-50">
         <div className="max-w-6xl mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -106,7 +106,7 @@ const AboutPage = () => {
           >
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
               About
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
                 {' '}Eloquent AI
               </span>
             </h1>
@@ -121,7 +121,7 @@ const AboutPage = () => {
                 <span className="text-sm font-medium text-gray-700">4.9/5 Rating</span>
               </div>
               <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm">
-                <Users className="w-5 h-5 text-blue-500" />
+                <Users className="w-5 h-5 text-orange-500" />
                 <span className="text-sm font-medium text-gray-700">50K+ Users</span>
               </div>
               <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm">
@@ -169,7 +169,7 @@ const AboutPage = () => {
               transition={{ duration: 0.8 }}
               className="relative"
             >
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl p-8">
+              <div className="bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl p-8">
                 <div className="bg-white rounded-xl p-6 shadow-lg">
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
                     Our Vision
@@ -181,11 +181,11 @@ const AboutPage = () => {
                   </p>
                   <div className="space-y-4">
                     <div className="flex items-center space-x-3">
-                      <Target className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                      <Target className="w-5 h-5 text-orange-500 flex-shrink-0" />
                       <span className="text-gray-700">Global accessibility</span>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Brain className="w-5 h-5 text-purple-500 flex-shrink-0" />
+                      <Brain className="w-5 h-5 text-pink-500 flex-shrink-0" />
                       <span className="text-gray-700">Advanced AI technology</span>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -238,7 +238,7 @@ const AboutPage = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+      <section className="py-20 bg-gradient-to-r from-orange-600 to-pink-600 text-white">
         <div className="max-w-6xl mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -300,7 +300,7 @@ const AboutPage = () => {
               >
                 <div className="text-6xl mb-6">{member.image}</div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">{member.name}</h3>
-                <p className="text-blue-600 font-semibold mb-4">{member.role}</p>
+                <p className="text-orange-600 font-semibold mb-4">{member.role}</p>
                 <p className="text-gray-600 text-sm leading-relaxed">{member.bio}</p>
               </motion.div>
             ))}
@@ -326,7 +326,7 @@ const AboutPage = () => {
           </motion.div>
           
           <div className="relative">
-            <div className="absolute left-1/2 transform -translate-x-px h-full w-0.5 bg-gradient-to-b from-blue-500 to-purple-500"></div>
+            <div className="absolute left-1/2 transform -translate-x-px h-full w-0.5 bg-gradient-to-b from-orange-500 to-pink-500"></div>
             <div className="space-y-12">
               {timeline.map((item, index) => (
                 <motion.div
@@ -338,12 +338,12 @@ const AboutPage = () => {
                 >
                   <div className={`w-1/2 ${index % 2 === 0 ? 'pr-8 text-right' : 'pl-8 text-left'}`}>
                     <div className="bg-white p-6 rounded-xl shadow-lg">
-                      <div className="text-2xl font-bold text-blue-600 mb-2">{item.year}</div>
+                      <div className="text-2xl font-bold text-orange-600 mb-2">{item.year}</div>
                       <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
                       <p className="text-gray-600">{item.description}</p>
                     </div>
                   </div>
-                  <div className="w-4 h-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full border-4 border-white shadow-lg"></div>
+                  <div className="w-4 h-4 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full border-4 border-white shadow-lg"></div>
                   <div className="w-1/2"></div>
                 </motion.div>
               ))}
@@ -375,9 +375,9 @@ const AboutPage = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-center p-8 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200"
+              className="text-center p-8 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200"
             >
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mx-auto mb-6">
                 <Brain className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Advanced AI Technology</h3>
@@ -391,9 +391,9 @@ const AboutPage = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-center p-8 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200"
+              className="text-center p-8 rounded-xl bg-gradient-to-br from-pink-50 to-pink-100 border border-pink-200"
             >
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-pink-600 rounded-xl flex items-center justify-center mx-auto mb-6">
                 <Zap className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Real-time Analysis</h3>
@@ -423,7 +423,7 @@ const AboutPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+      <section className="py-20 bg-gradient-to-r from-orange-600 to-pink-600 text-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -437,7 +437,7 @@ const AboutPage = () => {
               Join thousands of professionals who have already improved their presentation 
               skills with Eloquent AI. Start your journey today.
             </p>
-            <button className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl inline-flex items-center space-x-2">
+            <button className="bg-white text-orange-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl inline-flex items-center space-x-2">
               <span>Get Started Free</span>
               <ArrowRight className="w-5 h-5" />
             </button>

@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 import uuid
 
-from app.api.routes import audio, landmarks, sessions, health, analysis, upload
+from app.api.routes import audio, landmarks, sessions, health, analysis, upload, auth
 from app.core.config import settings
 from app.core.database import init_db
 from app.models.schemas import (
@@ -59,6 +59,7 @@ app.include_router(landmarks.router, prefix="/api/analyze", tags=["landmarks"])
 app.include_router(sessions.router, prefix="/api/session", tags=["sessions"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["analysis"])
 app.include_router(health.router, prefix="/api", tags=["health"])
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 # Mount static files
 if os.path.exists("static"):

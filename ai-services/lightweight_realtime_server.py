@@ -30,7 +30,7 @@ class LightweightAnalyzer:
     def __init__(self, gemini_api_key: str = None):
         # Hardcoded Gemini API key - REPLACE WITH YOUR ACTUAL GEMINI API KEY
         self.gemini_api_key = gemini_api_key or "YOUR_GEMINI_API_KEY_HERE"
-        self.gemini_model = None
+        self.gemini_model = None    
         if self.gemini_api_key and self.gemini_api_key.strip():
             try:
                 genai.configure(api_key=self.gemini_api_key)
@@ -303,18 +303,53 @@ class LightweightAnalyzer:
                 return {'score': np.mean(self.session_data['emotion_scores'][-5:]), 'status': 'Analysis error', 'details': str(e)}
             return {'score': 0.6, 'status': 'Analysis error', 'details': str(e)}
     
-    def transcribe_speech(self, audio_chunk: np.ndarray) -> Dict[str, Any]:
-        """Simple speech transcription (placeholder)"""
+    def transcribe_speech(self, audio_chunk: np.ndarray, sample_rate: int = 16000) -> Dict[str, Any]:
+        """Real speech transcription using Google Speech Recognition"""
         try:
-            # For now, return a placeholder transcription
-            # In a real implementation, you would use speech recognition here
-            transcription_text = "Speech analysis in progress..."
+            if audio_chunk is None or len(audio_chunk) < 1000:
+                return {'text': '', 'confidence': 0.0, 'error': 'Audio too short'}
             
-            self.session_data['transcriptions'].append(transcription_text)
-            if len(self.session_data['transcriptions']) > 5:
-                self.session_data['transcriptions'].pop(0)
+            # Convert numpy array to audio data for speech_recognition
+            # Normalize to int16 range
+            audio_int16 = (audio_chunk * 32767).astype(np.int16)
             
-            return {'text': transcription_text, 'confidence': 0.8}
+            # Create a temporary WAV file in memory
+            import io
+            import wave
+            
+            wav_buffer = io.BytesIO()
+            with wave.open(wav_buffer, 'wb') as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)  # 16-bit
+                wav_file.setframerate(sample_rate)
+                wav_file.writeframes(audio_int16.tobytes())
+            
+            wav_buffer.seek(0)
+            
+            # Use speech_recognition to transcribe
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(wav_buffer) as source:
+                audio_data = recognizer.record(source)
+            
+            # Try Google Speech Recognition (free, no API key needed)
+            try:
+                text = recognizer.recognize_google(audio_data)
+                confidence = 0.85  # Google doesn't return confidence, estimate high
+                
+                # Store transcription
+                self.session_data['transcriptions'].append(text)
+                if len(self.session_data['transcriptions']) > 10:
+                    self.session_data['transcriptions'].pop(0)
+                
+                logger.info(f"Transcribed: '{text[:50]}...' (confidence: {confidence})")
+                return {'text': text, 'confidence': confidence}
+                
+            except sr.UnknownValueError:
+                # Speech not understood - this is normal for silence/noise
+                return {'text': '', 'confidence': 0.0, 'error': 'Speech not understood'}
+            except sr.RequestError as e:
+                logger.error(f"Google Speech Recognition service error: {e}")
+                return {'text': '', 'confidence': 0.0, 'error': f'Service error: {e}'}
                     
         except Exception as e:
             logger.error(f"Speech transcription error: {str(e)}")

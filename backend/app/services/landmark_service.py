@@ -276,27 +276,76 @@ class LandmarkAnalysisService:
             return None
     
     def analyze_fidget(self, landmark: LandmarkData) -> Optional[FeedbackItem]:
-        """Analyze hand fidgeting using hand landmarks"""
+        """Analyze hand fidgeting using hand landmarks with real movement tracking"""
         try:
             if len(landmark.left_hand) == 0 and len(landmark.right_hand) == 0:
                 return None
             
-            # Calculate hand centroid
+            # Calculate hand centroid for current frame
             all_hand_landmarks = landmark.left_hand + landmark.right_hand
             if not all_hand_landmarks:
                 return None
             
-            centroid_x = sum(lm[0] for lm in all_hand_landmarks) / len(all_hand_landmarks)
-            centroid_y = sum(lm[1] for lm in all_hand_landmarks) / len(all_hand_landmarks)
+            current_centroid_x = sum(lm[0] for lm in all_hand_landmarks) / len(all_hand_landmarks)
+            current_centroid_y = sum(lm[1] for lm in all_hand_landmarks) / len(all_hand_landmarks)
             
-            # For now, return a basic analysis
-            # In a full implementation, you would track movement over time
-            fidget_score = 0.2  # Mock score
+            # Initialize history if needed
+            if not hasattr(self, 'hand_position_history'):
+                self.hand_position_history = []
             
-            if fidget_score > self.heuristic_config["fidget"]["velocity_threshold"]:
-                severity = SeverityLevel.WARNING if fidget_score < 0.5 else SeverityLevel.CRITICAL
-                message = "Hand fidgeting detected" if fidget_score < 0.5 else "Excessive hand movement detected"
+            # Calculate movement from previous frame
+            fidget_score = 0.0
+            if self.hand_position_history:
+                prev_x, prev_y, prev_t = self.hand_position_history[-1]
+                
+                # Calculate distance moved
+                distance = ((current_centroid_x - prev_x) ** 2 + 
+                           (current_centroid_y - prev_y) ** 2) ** 0.5
+                
+                # Calculate time delta (avoid division by zero)
+                time_delta = max(0.001, landmark.t - prev_t)
+                
+                # Velocity = distance / time
+                velocity = distance / time_delta
+                
+                # Calculate fidget score based on velocity
+                # Normal movement: < 0.5, Fidgeting: 0.5-1.0, Excessive: > 1.0
+                velocity_threshold = self.heuristic_config["fidget"]["velocity_threshold"]
+                
+                if velocity < velocity_threshold * 0.5:
+                    fidget_score = velocity / velocity_threshold  # Scale to 0-0.5
+                elif velocity < velocity_threshold:
+                    fidget_score = 0.3 + (velocity - velocity_threshold * 0.5) / velocity_threshold * 0.4
+                else:
+                    fidget_score = min(1.0, 0.7 + (velocity - velocity_threshold) / velocity_threshold * 0.3)
+                
+                # Consider variance in recent positions (jittery movement = fidgeting)
+                if len(self.hand_position_history) >= 5:
+                    recent_positions = self.hand_position_history[-5:]
+                    x_variance = sum((p[0] - current_centroid_x) ** 2 for p in recent_positions) / 5
+                    y_variance = sum((p[1] - current_centroid_y) ** 2 for p in recent_positions) / 5
+                    position_variance = (x_variance + y_variance) ** 0.5
+                    
+                    # High variance = more fidgeting
+                    variance_contribution = min(0.3, position_variance * 2)
+                    fidget_score = min(1.0, fidget_score + variance_contribution)
+            
+            # Store current position
+            self.hand_position_history.append((current_centroid_x, current_centroid_y, landmark.t))
+            
+            # Keep only last 30 frames of history
+            if len(self.hand_position_history) > 30:
+                self.hand_position_history.pop(0)
+            
+            # Determine feedback based on fidget score
+            if fidget_score > 0.7:
+                severity = SeverityLevel.CRITICAL
+                message = "Excessive hand movement detected"
                 actionable_tip = "Try to keep your hands more still or use purposeful gestures"
+            elif fidget_score > 0.4:
+                severity = SeverityLevel.WARNING
+                message = "Hand fidgeting detected"
+                actionable_tip = "Focus on making deliberate, controlled hand movements"
             else:
                 severity = SeverityLevel.GOOD
                 message = "Hands are steady"

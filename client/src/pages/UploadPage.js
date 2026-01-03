@@ -39,7 +39,7 @@ const UploadPage = () => {
       title: 'Upload File',
       description: 'Upload audio or video files for analysis',
       icon: Upload,
-      color: 'from-blue-500 to-blue-600',
+      color: 'from-orange-500 to-pink-500',
       features: ['Audio files (MP3, WAV, M4A)', 'Video files (MP4, AVI, MOV)', 'Max 100MB']
     },
     {
@@ -196,7 +196,7 @@ const UploadPage = () => {
 
   const getFileIcon = (file) => {
     if (file.type.startsWith('audio/')) {
-      return <FileAudio className="w-8 h-8 text-blue-500" />;
+      return <FileAudio className="w-8 h-8 text-orange-500" />;
     } else if (file.type.startsWith('video/')) {
       return <FileVideo className="w-8 h-8 text-orange-500" />;
     } else if (file.type.startsWith('text/')) {
@@ -218,7 +218,7 @@ const UploadPage = () => {
       icon: Mic,
       title: 'Speech Analysis',
       description: 'Analyze clarity, pace, filler words, and pronunciation',
-      color: 'from-blue-500 to-blue-600',
+      color: 'from-orange-500 to-pink-500',
       features: ['Clarity Score', 'Speaking Pace', 'Filler Word Detection', 'Pronunciation Analysis']
     },
     {
@@ -286,7 +286,7 @@ const UploadPage = () => {
                   whileTap={{ scale: 0.98 }}
                   className={`cursor-pointer rounded-2xl p-6 border-2 transition-all duration-200 ${
                     uploadMode === mode.id
-                      ? 'border-blue-500 bg-blue-50 shadow-lg'
+                      ? 'border-orange-500 bg-orange-50 shadow-lg'
                       : 'border-gray-200 bg-white hover:border-gray-300'
                   }`}
                   onClick={() => setUploadMode(mode.id)}
@@ -328,16 +328,16 @@ const UploadPage = () => {
                   {...getRootProps()}
                   className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 bg-white shadow-lg hover:shadow-xl ${
                     isDragActive
-                      ? 'border-blue-500 bg-blue-50 scale-105'
-                      : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                      ? 'border-orange-500 bg-orange-50 scale-105'
+                      : 'border-gray-300 hover:border-orange-400 hover:bg-gray-50'
                   }`}
                 >
                   <input {...getInputProps()} />
                   <div className="mb-6">
                     <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
-                      isDragActive ? 'bg-blue-100' : 'bg-gray-100'
+                      isDragActive ? 'bg-orange-100' : 'bg-gray-100'
                     }`}>
-                      <Upload className={`w-10 h-10 ${isDragActive ? 'text-blue-500' : 'text-gray-400'}`} />
+                      <Upload className={`w-10 h-10 ${isDragActive ? 'text-orange-500' : 'text-gray-400'}`} />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">
                       {isDragActive ? 'Drop your file here' : 'Upload your file'}
@@ -405,7 +405,7 @@ const UploadPage = () => {
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
                       placeholder="Enter your speech script, presentation content, or any written communication you'd like to analyze..."
-                      className="w-full h-48 p-4 border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full h-48 p-4 border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     />
                   </div>
                   
@@ -468,7 +468,7 @@ const UploadPage = () => {
                             onClick={() => setAnalysisType(option.value)}
                             className={`p-3 rounded-xl border-2 transition-all duration-200 ${
                               analysisType === option.value
-                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                ? 'border-orange-500 bg-orange-50 text-orange-700'
                                 : 'border-gray-200 hover:border-gray-300 text-gray-600'
                             }`}
                           >
@@ -493,8 +493,8 @@ const UploadPage = () => {
                   className="bg-white rounded-2xl p-6 shadow-lg border"
                 >
                   <div className="flex items-center space-x-4 mb-6">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 text-lg">Processing your content...</h3>
@@ -646,7 +646,7 @@ const UploadPage = () => {
                   <span className="text-sm">95%+ accuracy rate</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Clock className="w-5 h-5 text-blue-300" />
+                  <Clock className="w-5 h-5 text-orange-300" />
                   <span className="text-sm">Results in under 2 minutes</span>
                 </div>
               </div>

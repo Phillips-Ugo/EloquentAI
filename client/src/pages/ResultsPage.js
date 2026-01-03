@@ -114,11 +114,11 @@ const ResultsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50 flex items-center justify-center">
         <div className="text-center">
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-purple-600 rounded-full animate-spin mx-auto" style={{ animationDelay: '0.5s' }}></div>
+            <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto mb-6"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-pink-500 rounded-full animate-spin mx-auto" style={{ animationDelay: '0.5s' }}></div>
           </div>
           <h3 className="text-xl font-semibold text-gray-800 mb-2">Analyzing your content...</h3>
           <p className="text-gray-600">This may take a few moments</p>
@@ -129,7 +129,7 @@ const ResultsPage = () => {
 
   if (error || !results) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="w-10 h-10 text-red-600" />
@@ -138,7 +138,7 @@ const ResultsPage = () => {
           <p className="text-gray-600 mb-8">{error || 'Results not found'}</p>
           <Link
             to="/upload"
-            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-600 to-pink-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Try Again
@@ -214,7 +214,7 @@ const ResultsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-pink-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <motion.div 
@@ -239,10 +239,10 @@ const ResultsPage = () => {
             </div>
           </div>
           <div className="flex space-x-3">
-            <button className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-gray-600 hover:text-blue-600">
+            <button className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-gray-600 hover:text-orange-600">
               <Download className="w-5 h-5" />
             </button>
-            <button className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-gray-600 hover:text-purple-600">
+            <button className="p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-gray-600 hover:text-pink-500">
               <Share2 className="w-5 h-5" />
             </button>
           </div>
@@ -257,11 +257,11 @@ const ResultsPage = () => {
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
-              <div className={`p-3 rounded-xl ${isAudio ? 'bg-blue-100' : 'bg-purple-100'}`}>
+              <div className={`p-3 rounded-xl ${isAudio ? 'bg-orange-100' : 'bg-pink-100'}`}>
                 {isAudio ? (
-                  <Mic className={`w-8 h-8 ${isAudio ? 'text-blue-600' : 'text-purple-600'}`} />
+                  <Mic className={`w-8 h-8 ${isAudio ? 'text-orange-600' : 'text-pink-500'}`} />
                 ) : (
-                  <Video className="w-8 h-8 text-purple-600" />
+                  <Video className="w-8 h-8 text-pink-500" />
                 )}
               </div>
               <div>
@@ -331,7 +331,7 @@ const ResultsPage = () => {
                     onClick={() => setActiveTab('overview')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       activeTab === 'overview' 
-                        ? 'bg-blue-100 text-blue-700' 
+                        ? 'bg-orange-100 text-orange-600' 
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -341,7 +341,7 @@ const ResultsPage = () => {
                     onClick={() => setActiveTab('radar')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       activeTab === 'radar' 
-                        ? 'bg-purple-100 text-purple-700' 
+                        ? 'bg-pink-100 text-pink-600' 
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -521,7 +521,7 @@ const ResultsPage = () => {
                 className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8"
               >
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Speech Transcript</h3>
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 max-h-64 overflow-y-auto">
+                <div className="bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl p-6 max-h-64 overflow-y-auto">
                   <p className="text-gray-700 leading-relaxed text-sm">
                     {analysisData.transcript}
                   </p>
@@ -603,10 +603,10 @@ const ResultsPage = () => {
                 className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6"
               >
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Lightbulb className="w-5 h-5 text-blue-600" />
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Lightbulb className="w-5 h-5 text-orange-600" />
                   </div>
-                  <h3 className="text-lg font-bold text-blue-700">Suggestions</h3>
+                  <h3 className="text-lg font-bold text-orange-600">Suggestions</h3>
                 </div>
                 <div className="space-y-3">
                   {(results.suggestions || analysisData.suggestions || []).slice(0, 5).map((suggestion, index) => (
@@ -615,9 +615,9 @@ const ResultsPage = () => {
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 1.0 + index * 0.1 }}
-                      className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg"
+                      className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg"
                     >
-                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-white text-xs font-bold">{index + 1}</span>
                       </div>
                       <p className="text-gray-700 text-sm leading-relaxed">{suggestion}</p>
@@ -662,11 +662,11 @@ const ResultsPage = () => {
             >
               <Link
                 to="/upload"
-                className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center py-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="block w-full bg-gradient-to-r from-orange-600 to-pink-500 text-white text-center py-4 rounded-xl font-semibold hover:from-orange-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 Analyze Another File
               </Link>
-              <button className="w-full border-2 border-gray-300 text-gray-700 py-4 rounded-xl font-semibold hover:border-blue-600 hover:text-blue-600 transition-all duration-200 hover:shadow-lg">
+              <button className="w-full border-2 border-gray-300 text-gray-700 py-4 rounded-xl font-semibold hover:border-orange-600 hover:text-orange-600 transition-all duration-200 hover:shadow-lg">
                 Download Report
               </button>
             </motion.div>

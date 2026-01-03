@@ -8,8 +8,19 @@ from typing import Dict, List, Any, Optional
 import io
 import re
 import os
+import wave
+import tempfile
 
 logger = logging.getLogger(__name__)
+
+# Speech recognition for real transcription
+try:
+    import speech_recognition as sr
+    SPEECH_RECOGNITION_AVAILABLE = True
+except ImportError:
+    logger.warning("speech_recognition not available - transcription will be limited")
+    sr = None
+    SPEECH_RECOGNITION_AVAILABLE = False
 
 # Try to import ML libraries - these may not be available on all systems
 TORCH_AVAILABLE = False
@@ -148,7 +159,8 @@ class AudioAnalysisService:
     async def analyze_emotion(self, audio_data: np.ndarray, sample_rate: int) -> Dict[str, Any]:
         """Analyze emotion from audio data"""
         if settings.MOCK_RESPONSES or not self.model:
-            return self.mock_emotion_analysis()
+            # Use signal-based analysis as fallback
+            return self.analyze_emotion_from_signal(audio_data, sample_rate)
         
         try:
             # Extract features
@@ -187,27 +199,75 @@ class AudioAnalysisService:
             
         except Exception as e:
             logger.error(f"Emotion analysis failed: {e}")
-            return self.mock_emotion_analysis()
+            return self.analyze_emotion_from_signal(audio_data, sample_rate)
     
     async def analyze_speech_rate(self, audio_data: np.ndarray, sample_rate: int) -> tuple[int, str]:
-        """Analyze speech rate and transcribe audio"""
+        """Analyze speech rate and transcribe audio using real speech recognition"""
         try:
-            # For now, use a simple transcription approach
-            # In production, you would use a proper ASR model like Whisper
+            # Use real transcription
+            transcript = self.real_transcribe(audio_data, sample_rate)
             
-            # Mock transcription for demonstration
-            transcript = self.mock_transcribe(audio_data)
+            if not transcript:
+                logger.warning("No speech detected in audio")
+                return 0, ""
             
             # Calculate WPM
             words = transcript.split()
             duration_minutes = len(audio_data) / sample_rate / 60
             wpm = int(len(words) / duration_minutes) if duration_minutes > 0 else 0
             
+            logger.info(f"Transcribed {len(words)} words at {wpm} WPM")
             return wpm, transcript
             
         except Exception as e:
             logger.error(f"Speech rate analysis failed: {e}")
             return 0, ""
+    
+    def real_transcribe(self, audio_data: np.ndarray, sample_rate: int) -> str:
+        """Real transcription using Google Speech Recognition"""
+        if not SPEECH_RECOGNITION_AVAILABLE or sr is None:
+            logger.warning("Speech recognition not available, returning empty transcript")
+            return ""
+        
+        try:
+            # Convert numpy array to 16-bit integer audio
+            if audio_data.dtype == np.float32 or audio_data.dtype == np.float64:
+                audio_int16 = (audio_data * 32767).astype(np.int16)
+            else:
+                audio_int16 = audio_data.astype(np.int16)
+            
+            # Create a temporary WAV file
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+                with wave.open(tmp_path, 'wb') as wav_file:
+                    wav_file.setnchannels(1)
+                    wav_file.setsampwidth(2)  # 16-bit
+                    wav_file.setframerate(sample_rate)
+                    wav_file.writeframes(audio_int16.tobytes())
+            
+            # Use speech_recognition to transcribe
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(tmp_path) as source:
+                audio = recognizer.record(source)
+            
+            # Clean up temp file
+            os.unlink(tmp_path)
+            
+            # Try Google Speech Recognition (free, no API key needed)
+            try:
+                text = recognizer.recognize_google(audio)
+                logger.info(f"Successfully transcribed: '{text[:100]}...'")
+                return text
+            except sr.UnknownValueError:
+                logger.debug("Speech not understood")
+                return ""
+            except sr.RequestError as e:
+                logger.error(f"Speech Recognition service error: {e}")
+                return ""
+                
+        except Exception as e:
+            logger.error(f"Real transcription error: {e}")
+            return ""
     
     def detect_filler_words(self, transcript: str) -> Dict[str, Any]:
         """Detect filler words in transcript"""
@@ -296,6 +356,69 @@ class AudioAnalysisService:
             logger.error(f"Failed to resample audio: {e}")
             return audio_data
     
+    def analyze_emotion_from_signal(self, audio_data: np.ndarray, sample_rate: int) -> Dict[str, Any]:
+        """Analyze emotion from audio signal characteristics (fallback when ML model not available)"""
+        try:
+            # Calculate audio features
+            rms = np.sqrt(np.mean(audio_data ** 2))  # Volume/energy
+            
+            # Zero-crossing rate (indicates speech vs. silence)
+            zero_crossings = np.sum(np.abs(np.diff(np.sign(audio_data)))) / 2
+            zcr = zero_crossings / len(audio_data) if len(audio_data) > 0 else 0
+            
+            # Pitch variation (approximation based on signal dynamics)
+            if len(audio_data) > 1024:
+                audio_diff = np.abs(np.diff(audio_data))
+                variation = np.std(audio_diff) / (np.mean(np.abs(audio_data)) + 1e-6)
+            else:
+                variation = 0.5
+            
+            # Determine emotion based on audio characteristics
+            # High energy + high variation = excited/happy
+            # High energy + low variation = angry/assertive
+            # Low energy + low variation = calm/sad
+            # Moderate energy + moderate variation = neutral
+            
+            energy_level = "high" if rms > 0.1 else ("low" if rms < 0.02 else "moderate")
+            variation_level = "high" if variation > 0.5 else ("low" if variation < 0.2 else "moderate")
+            
+            if energy_level == "high" and variation_level == "high":
+                emotion = "excited"
+                confidence = 0.7
+            elif energy_level == "high" and variation_level == "low":
+                emotion = "confident"
+                confidence = 0.65
+            elif energy_level == "low" and variation_level == "low":
+                emotion = "calm"
+                confidence = 0.6
+            elif energy_level == "low":
+                emotion = "neutral"
+                confidence = 0.55
+            else:
+                emotion = "neutral"
+                confidence = 0.5
+            
+            # Build probability distribution
+            emotions = ["calm", "neutral", "happy", "confident", "excited"]
+            probabilities = {e: 0.1 for e in emotions}
+            probabilities[emotion] = confidence
+            
+            # Normalize
+            total = sum(probabilities.values())
+            probabilities = {k: v / total for k, v in probabilities.items()}
+            
+            return {
+                "emotion": emotion,
+                "probabilities": probabilities
+            }
+            
+        except Exception as e:
+            logger.error(f"Signal-based emotion analysis failed: {e}")
+            return {
+                "emotion": "neutral",
+                "probabilities": {"neutral": 0.7, "calm": 0.15, "confident": 0.15}
+            }
+    
     def get_filler_replacement(self, filler: str) -> str:
         """Get replacement for filler word"""
         replacements = {
@@ -312,85 +435,7 @@ class AudioAnalysisService:
         }
         return replacements.get(filler, '(remove)')
     
-    def mock_transcribe(self, audio_data: np.ndarray) -> str:
-        """Mock transcription for development"""
-        # Generate a realistic mock transcript based on audio length
-        duration = len(audio_data) / settings.TARGET_SAMPLE_RATE
-        word_count = int(duration * 2.5)  # Assume 150 WPM
-        
-        mock_words = [
-            "hello", "this", "is", "a", "test", "presentation", "about", "communication",
-            "skills", "and", "how", "to", "improve", "your", "public", "speaking",
-            "abilities", "today", "we", "will", "discuss", "various", "techniques",
-            "for", "better", "presentation", "delivery", "thank", "you", "for",
-            "listening", "to", "this", "demo", "recording"
-        ]
-        
-        # Generate transcript with some filler words
-        transcript_words = []
-        for i in range(word_count):
-            if i % 10 == 0:  # Add filler words occasionally
-                transcript_words.append("um")
-            elif i % 15 == 0:
-                transcript_words.append("like")
-            else:
-                transcript_words.append(mock_words[i % len(mock_words)])
-        
-        return " ".join(transcript_words)
-    
-    async def mock_analyze_audio(self, audio_content: bytes, filename: str) -> AudioAnalysisResponse:
-        """Mock audio analysis for development"""
-        # Simulate processing delay
-        import asyncio
-        await asyncio.sleep(1.0)
-        
-        # Mock emotion analysis
-        emotions = ["confident", "neutral", "anxious", "excited", "calm"]
-        emotion = np.random.choice(emotions)
-        
-        probabilities = {}
-        for emo in emotions:
-            if emo == emotion:
-                probabilities[emo] = 0.7 + np.random.random() * 0.2
-            else:
-                probabilities[emo] = np.random.random() * 0.3
-        
-        # Normalize probabilities
-        total = sum(probabilities.values())
-        probabilities = {k: v/total for k, v in probabilities.items()}
-        
-        # Mock speech analysis
-        wpm = np.random.randint(120, 180)
-        filler_counts = {
-            "um": np.random.randint(0, 5),
-            "like": np.random.randint(0, 3),
-            "so": np.random.randint(0, 2)
-        }
-        
-        # Mock replacements
-        replacements = []
-        if filler_counts["um"] > 0:
-            replacements.append(Replacement(
-                position=10,
-                original="um",
-                suggestion="(pause)"
-            ))
-        
-        # Mock timestamps
-        timestamps = [
-            Timestamp(t=2.1, type="filler", word="um"),
-            Timestamp(t=5.3, type="filler", word="like"),
-            Timestamp(t=8.7, type="emotion", emotion=emotion)
-        ]
-        
-        return AudioAnalysisResponse(
-            emotion=emotion,
-            probabilities=probabilities,
-            wpm=wpm,
-            filler_word_counts=filler_counts,
-            suggested_replacements=replacements,
-            timestamps=timestamps
-        )
+    # DEPRECATED: mock_transcribe and mock_analyze_audio removed - using real implementations
     
     async def analyze_audio_chunk(self, chunk_content: bytes, session_id: str, chunk_index: int) -> Dict[str, Any]:
         """Analyze audio chunk for streaming"""

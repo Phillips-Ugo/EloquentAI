@@ -3,23 +3,33 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './contexts/AuthContext';
 import './App.css';
-import './styles/world-class.css';
+import './styles/unified-theme.css';
 
-// Components
+// Core Pages
 import ConsumerLandingPage from './pages/ConsumerLandingPage';
-import ConsumerHeader from './components/ConsumerHeader';
-import ConsumerFooter from './components/ConsumerFooter';
+import PracticePage from './pages/PracticePage';
 import UploadPage from './pages/UploadPage';
 import ResultsPage from './pages/ResultsPage';
-import TextAnalysisResults from './pages/TextAnalysisResults';
-import AboutPage from './pages/AboutPage';
-import RealTimeVideoAnalysis from './components/RealTimeVideoAnalysis';
-import RealtimeAnalysisPage from './pages/RealtimeAnalysisPage';
-import PricingPage from './pages/PricingPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 import SignInPage from './pages/SignInPage';
 import SignUpPage from './pages/SignUpPage';
+import AboutPage from './pages/AboutPage';
 
+// Components
+import ConsumerHeader from './components/ConsumerHeader';
+import ConsumerFooter from './components/ConsumerFooter';
+
+// Simple page wrapper for animations
+const PageWrapper = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    transition={{ duration: 0.3 }}
+  >
+    {children}
+  </motion.div>
+);
 
 function App() {
   return (
@@ -29,169 +39,29 @@ function App() {
           <ConsumerHeader />
           
           <main>
-          <AnimatePresence mode="wait">
-            <Routes>
-              <Route 
-                path="/" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ConsumerLandingPage />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/upload" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <UploadPage />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/results/:analysisId" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ResultsPage />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/text-results/:analysisId" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <TextAnalysisResults />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/about" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <AboutPage />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/realtime-video" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <RealTimeVideoAnalysis />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/realtime-analysis" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <RealtimeAnalysisPage />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/pricing" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <PricingPage />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/analytics" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <AnalyticsDashboardPage />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/signin" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <SignInPage />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/signup" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <SignUpPage />
-                  </motion.div>
-                } 
-              />
-              <Route 
-                path="/login" 
-                element={
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <SignInPage />
-                  </motion.div>
-                } 
-              />
-
-            </Routes>
-          </AnimatePresence>
-        </main>
-        
+            <AnimatePresence mode="wait">
+              <Routes>
+                {/* Main Routes */}
+                <Route path="/" element={<PageWrapper><ConsumerLandingPage /></PageWrapper>} />
+                <Route path="/practice" element={<PageWrapper><PracticePage /></PageWrapper>} />
+                <Route path="/upload" element={<PageWrapper><UploadPage /></PageWrapper>} />
+                <Route path="/results/:analysisId" element={<PageWrapper><ResultsPage /></PageWrapper>} />
+                <Route path="/dashboard" element={<PageWrapper><AnalyticsDashboardPage /></PageWrapper>} />
+                <Route path="/about" element={<PageWrapper><AboutPage /></PageWrapper>} />
+                
+                {/* Auth Routes */}
+                <Route path="/signin" element={<PageWrapper><SignInPage /></PageWrapper>} />
+                <Route path="/signup" element={<PageWrapper><SignUpPage /></PageWrapper>} />
+                <Route path="/login" element={<PageWrapper><SignInPage /></PageWrapper>} />
+                
+                {/* Legacy redirects */}
+                <Route path="/realtime-analysis" element={<PageWrapper><PracticePage /></PageWrapper>} />
+                <Route path="/realtime-video" element={<PageWrapper><PracticePage /></PageWrapper>} />
+                <Route path="/analytics" element={<PageWrapper><AnalyticsDashboardPage /></PageWrapper>} />
+              </Routes>
+            </AnimatePresence>
+          </main>
+          
           <ConsumerFooter />
         </div>
       </Router>
@@ -199,4 +69,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;

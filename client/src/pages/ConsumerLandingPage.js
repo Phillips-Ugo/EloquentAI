@@ -27,35 +27,27 @@ const ConsumerLandingPage = () => {
   const features = [
     {
       icon: Video,
-      title: 'Real-Time Analysis',
-      description: 'Get instant feedback on your communication as you speak. See your posture, eye contact, and gestures analyzed in real-time.',
+      title: 'Practice Mode',
+      description: 'Get real-time AI coaching as you speak. See your posture, eye contact, gestures, and voice analyzed instantly.',
       color: 'from-orange-500 to-pink-500',
-      metrics: ['Posture Detection', 'Eye Contact', 'Gestures', 'Facial Expressions'],
-      href: '/realtime-analysis'
-    },
-    {
-      icon: Mic,
-      title: 'AI Speech Analysis',
-      description: 'Advanced AI analyzes your speech patterns, clarity, pace, and helps you eliminate filler words.',
-      color: 'from-orange-500 to-pink-500',
-      metrics: ['Speech Clarity', 'Pace Analysis', 'Filler Words', 'Sentiment'],
-      href: '/upload'
+      metrics: ['Posture', 'Eye Contact', 'Voice Clarity', 'Live Feedback'],
+      href: '/practice'
     },
     {
       icon: Upload,
-      title: 'File Analysis',
-      description: 'Upload your recordings and get comprehensive insights. Perfect for reviewing past presentations.',
+      title: 'Upload & Analyze',
+      description: 'Upload your recordings for comprehensive AI analysis. Perfect for reviewing presentations and speeches.',
       color: 'from-orange-500 to-pink-500',
-      metrics: ['Audio Support', 'Video Support', 'Detailed Reports', 'Export Options'],
+      metrics: ['Video Analysis', 'Audio Analysis', 'Detailed Reports', 'Improvement Tips'],
       href: '/upload'
     },
     {
       icon: BarChart3,
-      title: 'Progress Tracking',
-      description: 'Watch your communication skills improve over time with detailed analytics and progress reports.',
+      title: 'Track Progress',
+      description: 'See your communication skills improve over time with detailed analytics and personalized insights.',
       color: 'from-orange-500 to-red-500',
-      metrics: ['Performance Trends', 'Skill Breakdown', 'Session History', 'Achievements'],
-      href: '/analytics'
+      metrics: ['Performance Trends', 'Session History', 'Skill Breakdown', 'Achievements'],
+      href: '/dashboard'
     }
   ];
 
@@ -166,9 +158,9 @@ const ConsumerLandingPage = () => {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link to="/realtime-analysis">
+              <Link to="/practice">
                 <Button size="lg" icon={PlayCircle} iconPosition="left">
-                  Start Free Analysis
+                  Start Practicing
                 </Button>
               </Link>
               <Link to="/upload">
@@ -260,13 +252,14 @@ const ConsumerLandingPage = () => {
                 >
                   <Card
                     variant={isActive ? 'elevated' : 'default'}
-                    className={`p-8 cursor-pointer h-full premium-card border-transparent ${isActive ? 'ring-2 ring-orange-100' : ''}`}
+                    style={feature.title === 'Practice Mode' ? { background: 'linear-gradient(135deg, #fed7aa 0%, #fecdd3 50%, #fce7f3 100%)' } : {}}
+                    className={`p-8 cursor-pointer h-full premium-card border-transparent ${isActive ? 'ring-2 ring-orange-100' : ''} ${feature.title === 'Practice Mode' ? 'border-orange-200' : ''}`}
                   >
                     <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6 transform transition-transform ${isActive ? 'scale-110' : ''}`}>
                       <Icon className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                    <p className="text-gray-600 mb-6 leading-relaxed">{feature.description}</p>
+                    <h3 className={`text-2xl font-bold mb-3 ${feature.title === 'Practice Mode' ? 'bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent' : 'text-gray-900'}`}>{feature.title}</h3>
+                    <p className={`mb-6 leading-relaxed ${feature.title === 'Practice Mode' ? 'text-gray-700' : 'text-gray-600'}`}>{feature.description}</p>
                     <div className="grid grid-cols-2 gap-3 mb-6">
                       {feature.metrics.map((metric, i) => (
                         <div key={i} className="flex items-center space-x-2 text-sm text-gray-600">
@@ -287,7 +280,7 @@ const ConsumerLandingPage = () => {
               );
             })}
           </div>
-        </div>
+        </div> 
       </section>
 
       {/* Benefits Section */}
@@ -398,12 +391,12 @@ const ConsumerLandingPage = () => {
               transition={{ delay: 0.2 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link to="/realtime-analysis">
+              <Link to="/practice">
                 <Button variant="primary" size="lg" icon={PlayCircle} iconPosition="left">
-                  Start Free Analysis
+                  Start Practicing Now
                 </Button>
               </Link>
-              <Link to="/pricing">
+              <Link to="/upload">
                 <Button variant="secondary" size="lg">
                   View Pricing
                 </Button>
