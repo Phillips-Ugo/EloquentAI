@@ -8,8 +8,10 @@ services:
     buildCommand: |
       cd server && npm install &&
       cd ../ai-services && 
-      python3 -m pip install --upgrade pip &&
-      python3 -m pip install -r requirements.txt
+      python3 -m pip install --upgrade pip --quiet &&
+      python3 -m pip install -r requirements.txt --quiet &&
+      python3 -c "import openai; print('Python dependencies OK')" &&
+      cd ../server && node scripts/check-python-deps.js
     startCommand: cd server && node index.js
     envVars:
       - key: NODE_ENV
