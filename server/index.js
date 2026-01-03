@@ -13,6 +13,8 @@ require('dotenv').config();
 const uploadRoutes = require('./routes/upload');
 const analysisRoutes = require('./routes/analysis');
 const healthRoutes = require('./routes/health');
+const analyticsRoutes = require('./routes/analytics');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -62,6 +64,8 @@ fs.ensureDirSync(uploadsDir);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/auth', authRoutes);
 
 // Serve static files from React build (only if build directory exists)
 // This is for local development or if frontend is deployed with backend
