@@ -30,9 +30,15 @@ router.post('/register', async (req, res) => {
       role
     });
 
+    // Format response to match frontend expectations
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
+      id: result.user.id,
+      email: result.user.email,
+      name: `${result.user.first_name || ''} ${result.user.last_name || ''}`.trim() || result.user.email,
+      token: result.accessToken,
+      refreshToken: result.refreshToken,
       data: result
     });
 
@@ -61,9 +67,15 @@ router.post('/login', async (req, res) => {
 
     const result = await authService.login(email, password);
 
+    // Format response to match frontend expectations
     res.json({
       success: true,
       message: 'Login successful',
+      id: result.user.id,
+      email: result.user.email,
+      name: `${result.user.first_name || ''} ${result.user.last_name || ''}`.trim() || result.user.email,
+      token: result.accessToken,
+      refreshToken: result.refreshToken,
       data: result
     });
 
