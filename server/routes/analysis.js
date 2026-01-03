@@ -93,40 +93,63 @@ router.post('/:analysisId', async (req, res) => {
     session.analysisStartedAt = new Date().toISOString();
     await fs.writeJson(sessionPath, session);
 
-    // Determine analysis type and start appropriate service
-    const analysisType = session.type || 'speech';
-    await ensurePythonService(analysisType);
+    try {
+      // Determine analysis type and start appropriate service
+      const analysisType = session.type || 'speech';
+      await ensurePythonService(analysisType);
 
-    let analysisResult;
+      let analysisResult;
 
-    // Handle different upload modes
-    if (session.uploadMode === 'text') {
-      // Text analysis
-      analysisResult = await performTextAnalysis(session, analysisType);
-    } else {
-      // File analysis (audio/video)
-      analysisResult = await performFileAnalysis(session, analysisType);
-    }
+      // Handle different upload modes
+      if (session.uploadMode === 'text') {
+        // Text analysis
+        analysisResult = await performTextAnalysis(session, analysisType);
+      } else {
+        // File analysis (audio/video)
+        analysisResult = await performFileAnalysis(session, analysisType);
+      }
 
-    // Update session with results
-    session.status = 'completed';
-    session.analysisCompletedAt = new Date().toISOString();
-    session.results = analysisResult;
-    await fs.writeJson(sessionPath, session);
+      // Update session with results
+      session.status = 'completed';
+      session.analysisCompletedAt = new Date().toISOString();
+      session.results = analysisResult;
+      await fs.writeJson(sessionPath, session);
 
-    res.json({
-      success: true,
-      message: 'Analysis completed successfully',
+      res.json({
+        success: true,
+        message: 'Analysis completed successfully',
       data: {
         analysisId,
         results: analysisResult
       }
     });
 
+    } catch (analysisError) {
+      console.error('Analysis processing error:', analysisError);
+      console.error('Error stack:', analysisError.stack);
+      
+      // Update session with error
+      session.status = 'error';
+      session.error = analysisError.message;
+      session.analysisCompletedAt = new Date().toISOString();
+      try {
+        await fs.writeJson(sessionPath, session);
+      } catch (writeError) {
+        console.error('Error writing session file:', writeError);
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Analysis failed',
+        error: analysisError.message,
+        details: process.env.NODE_ENV === 'development' ? analysisError.stack : undefined
+      });
+    }
   } catch (error) {
-    console.error('Analysis error:', error);
+    console.error('Analysis route error:', error);
+    console.error('Error stack:', error.stack);
     
-    // Update session with error
+    // Update session with error if possible
     try {
       const { analysisId } = req.params;
       const sessionPath = path.join(__dirname, '../sessions', `${analysisId}.json`);
@@ -144,7 +167,8 @@ router.post('/:analysisId', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Analysis failed',
-      error: error.message
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
