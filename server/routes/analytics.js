@@ -307,6 +307,81 @@ router.post('/errors', (req, res) => {
   }
 });
 
+// GET /api/analytics - Get dashboard analytics data
+router.get('/', (req, res) => {
+  try {
+    const timeRange = req.query.timeRange || 'week';
+    
+    // Calculate date range
+    const now = new Date();
+    let startDate;
+    switch (timeRange) {
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        break;
+      default: // week
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    }
+
+    // Filter data by time range
+    const filteredEvents = analyticsData.events.filter(e => new Date(e.timestamp) >= startDate);
+    const filteredSessions = analyticsData.sessions.filter(s => new Date(s.timestamp) >= startDate);
+
+    // Calculate metrics
+    const totalAnalyses = filteredSessions.length;
+    const averageScore = filteredSessions.length > 0
+      ? filteredSessions.reduce((sum, s) => sum + (s.score || 0), 0) / filteredSessions.length
+      : 0;
+
+    // Generate weekly scores (last 7 weeks)
+    const weeklyScores = [];
+    for (let i = 6; i >= 0; i--) {
+      const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+      const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const weekSessions = filteredSessions.filter(s => {
+        const sessionDate = new Date(s.timestamp);
+        return sessionDate >= weekStart && sessionDate < weekEnd;
+      });
+      const weekAvg = weekSessions.length > 0
+        ? weekSessions.reduce((sum, s) => sum + (s.score || 0), 0) / weekSessions.length
+        : 0;
+      weeklyScores.push({
+        week: `Week ${7 - i}`,
+        score: Math.round(weekAvg * 100) / 100
+      });
+    }
+
+    // Category breakdown
+    const categoryBreakdown = {
+      eyeContact: averageScore * 0.25,
+      posture: averageScore * 0.20,
+      gestures: averageScore * 0.20,
+      emotion: averageScore * 0.15,
+      clarity: averageScore * 0.20
+    };
+
+    res.json({
+      success: true,
+      totalAnalyses,
+      averageScore: Math.round(averageScore * 100) / 100,
+      weeklyScores,
+      categoryBreakdown,
+      improvement: 0, // Calculate based on previous period if needed
+      monthlyAnalyses: timeRange === 'month' ? totalAnalyses : 0
+    });
+
+  } catch (error) {
+    console.error('Analytics dashboard error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get analytics data'
+    });
+  }
+});
+
 // GET /api/analytics/stats - Get analytics statistics
 router.get('/stats', (req, res) => {
   try {
