@@ -481,22 +481,16 @@ async function performVideoAnalysis(session) {
           try {
             const result = JSON.parse(output);
             if (result.success) {
-              // Transform the result to match the expected format
-              const transformedResult = {
-                overallScore: result.data.overall_score || result.data.overall,
-                posture_score: result.data.posture_score || result.data.posture,
-                eye_contact_score: result.data.eye_contact_score || result.data.eye_contact,
-                gesture_score: result.data.gesture_score || result.data.gestures,
-                movement_score: result.data.movement_score || result.data.movement,
-                strengths: result.data.strengths || [],
-                improvements: result.data.improvements || [],
-                suggestions: result.data.suggestions || [],
-                categories: result.data.categories || {},
-                detailedAnalysis: result.data.detailed_analysis || {},
-                videoMetrics: result.data.video_metrics || {}
-              };
-              console.log('Video analysis successful:', transformedResult);
-              resolve(transformedResult);
+              // Transform to standard format using transformer
+              try {
+                const transformedResult = transformAnalysisResult(result.data, 'video');
+                console.log('Video analysis successful:', transformedResult);
+                resolve(transformedResult);
+              } catch (transformError) {
+                console.error('Error transforming video analysis result:', transformError);
+                reject(new Error(`Invalid video analysis result format: ${transformError.message}`));
+                return;
+              }
             } else {
               console.error(`Video analysis returned error: ${result.error}`);
               reject(new Error(`Video analysis failed: ${result.error}`));
@@ -743,7 +737,7 @@ async function performTextAnalysis(session, analysisType) {
                 // #region agent log
                 fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1083',message:'Python returned fallback data',data:{source:result.data._source},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
                 // #endregion
-                reject(new Error('Python analysis failed - GPT API unavailable or returned invalid response. Check OPENAI_API_KEY and API status.'));
+                reject(new Error('Python analysis failed - Gemini API unavailable or returned invalid response. Check GEMINI_API_KEY and API status.'));
                 return;
               }
               

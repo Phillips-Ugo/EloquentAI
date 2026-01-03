@@ -1,9 +1,10 @@
-import openai
+import google.generativeai as genai
 import json
 import os
 from typing import Dict, List, Any
 import logging
 from pathlib import Path
+import traceback
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -14,18 +15,17 @@ class TextAnalyzer:
         # Load environment variables from env.local file
         self._load_env_vars()
         
-        # Initialize OpenAI client
-        api_key = os.getenv('OPENAI_API_KEY')
+        # Initialize Gemini client
+        api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
-            logger.error("OPENAI_API_KEY not found in environment variables")
-            raise ValueError("OPENAI_API_KEY is required")
+            logger.error("GEMINI_API_KEY not found in environment variables")
+            raise ValueError("GEMINI_API_KEY is required")
         
-        logger.info("Initializing OpenAI client with API key")
-        # Use environment variable for API key
-        api_key = os.getenv('OPENAI_API_KEY')
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is required")
-        self.client = openai.OpenAI(api_key=api_key)
+        logger.info("Initializing Google Gemini client with API key")
+        # Configure Gemini
+        genai.configure(api_key=api_key)
+        # Use Gemini 1.5 Pro for best analysis quality
+        self.model = genai.GenerativeModel('gemini-1.5-pro')
         
     def _load_env_vars(self):
         """Load environment variables from env.local file"""
@@ -101,29 +101,24 @@ class TextAnalyzer:
             Provide HONEST, DETAILED feedback. Even excellent texts can be improved. Always provide specific, actionable insights.
             """
             
-            logger.info("Calling ChatGPT API...")
-            # Call ChatGPT API with optimized settings
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert English communication analyst with years of experience. Your role is to provide COMPREHENSIVE, DETAILED feedback with specific insights. Always provide at least 3 strengths, 3 improvements, and 3 suggestions, even for excellent texts. Focus on actionable, specific feedback that helps writers improve their communication skills."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=0.7,  # Balanced temperature for detailed responses
-                max_tokens=2000,  # Increased tokens for comprehensive feedback
-                timeout=45  # Increased timeout for detailed analysis
+            logger.info("Calling Google Gemini API...")
+            # Call Gemini API with optimized settings
+            full_prompt = f"""You are an expert English communication analyst with years of experience. Your role is to provide COMPREHENSIVE, DETAILED feedback with specific insights. Always provide at least 3 strengths, 3 improvements, and 3 suggestions, even for excellent texts. Focus on actionable, specific feedback that helps writers improve their communication skills.
+
+{prompt}"""
+            
+            response = self.model.generate_content(
+                full_prompt,
+                generation_config={
+                    "temperature": 0.7,  # Balanced temperature for detailed responses
+                    "max_output_tokens": 2000,  # Increased tokens for comprehensive feedback
+                }
             )
             
-            logger.info("Received response from ChatGPT API")
+            logger.info("Received response from Google Gemini API")
             # Extract and parse the response
-            analysis_text = response.choices[0].message.content.strip()
-            logger.info(f"ChatGPT response: {analysis_text[:200]}...")
+            analysis_text = response.text.strip()
+            logger.info(f"Gemini response: {analysis_text[:200]}...")
             
             # Try to extract JSON from the response
             try:
@@ -134,9 +129,9 @@ class TextAnalyzer:
                 if start_idx != -1 and end_idx != 0:
                     json_str = analysis_text[start_idx:end_idx]
                     analysis_result = json.loads(json_str)
-                    logger.info("Successfully parsed JSON response from ChatGPT")
+                    logger.info("Successfully parsed JSON response from Gemini")
                     
-                    # Check if this is real GPT data with detailed content
+                    # Check if this is real Gemini data with detailed content
                     has_detailed_content = (
                         analysis_result.get("strengths") and 
                         len(analysis_result.get("strengths", [])) >= 3 and
@@ -147,7 +142,7 @@ class TextAnalyzer:
                     )
                     
                     if has_detailed_content:
-                        logger.info("GPT provided comprehensive analysis with detailed feedback")
+                        logger.info("Gemini provided comprehensive analysis with detailed feedback")
                         # Only validate score ranges, don't override real data
                         if "overallScore" in analysis_result:
                             analysis_result["overallScore"] = max(0.0, min(1.0, float(analysis_result["overallScore"])))
@@ -156,23 +151,23 @@ class TextAnalyzer:
                             for category, score in analysis_result["categories"].items():
                                 analysis_result["categories"][category] = max(0.0, min(1.0, float(score)))
                     else:
-                        logger.error("GPT response lacks detailed content - this is an error")
-                        raise ValueError(f"GPT API returned incomplete analysis. Expected detailed feedback but got: {analysis_text[:200]}")
+                        logger.error("Gemini response lacks detailed content - this is an error")
+                        raise ValueError(f"Gemini API returned incomplete analysis. Expected detailed feedback but got: {analysis_text[:200]}")
                 else:
-                    logger.error("No JSON found in ChatGPT response - this is an error")
-                    raise ValueError(f"GPT API response does not contain valid JSON. Response: {analysis_text[:200]}")
+                    logger.error("No JSON found in Gemini response - this is an error")
+                    raise ValueError(f"Gemini API response does not contain valid JSON. Response: {analysis_text[:200]}")
                     
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON response: {e}")
                 logger.error(f"Raw response: {analysis_text}")
-                raise ValueError(f"Failed to parse GPT API response as JSON: {e}. Response: {analysis_text[:200]}")
+                raise ValueError(f"Failed to parse Gemini API response as JSON: {e}. Response: {analysis_text[:200]}")
             
-            # Add source indicator - NO FALLBACK, fail if GPT doesn't work
+            # Add source indicator - NO FALLBACK, fail if Gemini doesn't work
             if not has_detailed_content:
-                logger.error("GPT response lacks detailed content - this is an error, not a fallback case")
-                raise ValueError("GPT API returned incomplete analysis. Response may be malformed or API may be experiencing issues.")
+                logger.error("Gemini response lacks detailed content - this is an error, not a fallback case")
+                raise ValueError("Gemini API returned incomplete analysis. Response may be malformed or API may be experiencing issues.")
             
-            analysis_result["_source"] = "gpt"
+            analysis_result["_source"] = "gemini"
             
             return {
                 "success": True,
@@ -278,7 +273,7 @@ if __name__ == "__main__":
         analysis_type = request.get('analysis_type', 'text')
         
         sys.stderr.write(f"DEBUG: Text content length: {len(text_content)}, analysis_type: {analysis_type}\n")
-        sys.stderr.write(f"DEBUG: OPENAI_API_KEY present: {bool(os.getenv('OPENAI_API_KEY'))}\n")
+        sys.stderr.write(f"DEBUG: GEMINI_API_KEY present: {bool(os.getenv('GEMINI_API_KEY'))}\n")
         sys.stderr.flush()
         
         if not text_content:

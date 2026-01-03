@@ -65,7 +65,7 @@ router.get('/detailed', async (req, res) => {
     try {
       const pythonCmd = process.env.PYTHON_CMD || 'python3';
       const depsCheck = await new Promise((resolve, reject) => {
-        const proc = spawn(pythonCmd, ['-c', 'import openai; import json; import os; print("OK")']);
+        const proc = spawn(pythonCmd, ['-c', 'import google.generativeai; import json; import os; print("OK")']);
         let errorOutput = '';
         proc.stderr.on('data', (data) => errorOutput += data.toString());
         proc.on('close', (code) => {
@@ -76,7 +76,7 @@ router.get('/detailed', async (req, res) => {
       });
       health.checks.pythonDependencies = {
         available: true,
-        openai: true
+        google_generativeai: true
       };
     } catch (error) {
       health.checks.pythonDependencies = {
@@ -87,12 +87,12 @@ router.get('/detailed', async (req, res) => {
       health.status = 'degraded';
     }
 
-    // Check OpenAI API key
-    health.checks.openaiKey = {
-      configured: !!process.env.OPENAI_API_KEY,
-      length: process.env.OPENAI_API_KEY?.length || 0
+    // Check Gemini API key
+    health.checks.geminiKey = {
+      configured: !!process.env.GEMINI_API_KEY,
+      length: process.env.GEMINI_API_KEY?.length || 0
     };
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       health.success = false;
       health.status = 'degraded';
     }
