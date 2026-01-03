@@ -80,22 +80,44 @@ if (clientBuildExists) {
         message: 'API route not found'
       });
     }
-    res.sendFile(path.join(clientBuildPath, 'index.html'));
-  });
-} else {
-  // If client build doesn't exist (e.g., frontend deployed separately on Vercel)
-  // Only serve API routes and return 404 for non-API routes
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api/')) {
-      return res.status(404).json({
+    const indexPath = path.join(clientBuildPath, 'index.html');
+    // Double-check file exists before sending
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          console.error('Error sending index.html:', err);
+          res.status(404).json({
+            success: false,
+            message: 'Frontend is deployed separately. Please access the frontend URL.',
+            info: 'This is an API-only server.'
+          });
+        }
+      });
+    } else {
+      res.status(404).json({
         success: false,
         message: 'Frontend is deployed separately. Please access the frontend URL.',
         info: 'This is an API-only server.'
       });
     }
+  });
+} else {
+  // If client build doesn't exist (e.g., frontend deployed separately on Vercel)
+  // Only serve API routes and return 404 for non-API routes
+  // This catch-all must come AFTER API routes
+  app.get('*', (req, res) => {
+    // Skip API routes (they should have been handled above)
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({
+        success: false,
+        message: 'API route not found'
+      });
+    }
+    // For non-API routes, return info message
     res.status(404).json({
       success: false,
-      message: 'API route not found'
+      message: 'Frontend is deployed separately. Please access the frontend URL.',
+      info: 'This is an API-only server.'
     });
   });
 }
