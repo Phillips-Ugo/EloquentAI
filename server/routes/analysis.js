@@ -222,11 +222,16 @@ async function performAudioAnalysis(session) {
     
     // Run the audio analyzer as a subprocess
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn('python', [
+      const pythonProcess = spawn('python3', [
         path.join(__dirname, '../../ai-services/audio_analyzer.py')
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: path.join(__dirname, '../../ai-services'),
+        env: {
+          ...process.env,
+          PYTHONPATH: path.join(__dirname, '../../ai-services'),
+          PYTHONUNBUFFERED: '1'
+        },
         timeout: 300000 // 5 minute timeout
       });
 
@@ -399,9 +404,8 @@ async function performComprehensiveVideoAnalysis(session) {
     
   } catch (error) {
     console.error('Comprehensive video analysis error:', error);
-    // Fallback to video-only analysis if comprehensive fails
-    console.log('Falling back to video-only analysis');
-    return await performVideoAnalysis(session);
+    // NO FALLBACK - throw the error
+    throw new Error(`Comprehensive video analysis failed: ${error.message}`);
   }
 }
 
@@ -413,10 +417,16 @@ async function performVideoAnalysis(session) {
     
     // Run the video analyzer as a subprocess
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn('python', [
+      const pythonCmd = process.env.PYTHON_CMD || 'python3';
+      const pythonProcess = spawn(pythonCmd, [
         path.join(__dirname, '../../ai-services/video_analyzer.py')
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          PYTHONPATH: path.join(__dirname, '../../ai-services'),
+          PYTHONUNBUFFERED: '1'
+        },
         cwd: path.join(__dirname, '../../ai-services'),
         timeout: 300000 // 5 minute timeout
       });
@@ -638,15 +648,25 @@ async function performTextAnalysis(session, analysisType) {
       const pythonCmd = process.env.PYTHON_CMD || 'python3';
       const workingDir = path.join(__dirname, '../../ai-services');
       const pythonPath = path.join(__dirname, '../../ai-services');
+      // CRITICAL: Ensure OPENAI_API_KEY is passed to Python subprocess
       const envVars = {
         ...process.env,
         PYTHONPATH: pythonPath,
-        PYTHONUNBUFFERED: '1'
+        PYTHONUNBUFFERED: '1',
+        // Explicitly pass OPENAI_API_KEY if it exists
+        ...(process.env.OPENAI_API_KEY ? { OPENAI_API_KEY: process.env.OPENAI_API_KEY } : {})
       };
       
       // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1018',message:'Before Python spawn',data:{pythonCmd,scriptPath,workingDir,pythonPath,hasOpenAIKey:!!envVars.OPENAI_API_KEY,openAIKeyLength:envVars.OPENAI_API_KEY?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1018',message:'Before Python spawn',data:{pythonCmd,scriptPath,workingDir,pythonPath,hasOpenAIKey:!!envVars.OPENAI_API_KEY,openAIKeyLength:envVars.OPENAI_API_KEY?.length||0,envVarCount:Object.keys(envVars).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
+      
+      // Verify OPENAI_API_KEY is available
+      if (!envVars.OPENAI_API_KEY) {
+        console.error('ERROR: OPENAI_API_KEY not found in environment variables');
+        reject(new Error('OPENAI_API_KEY environment variable is required for text analysis. Please set it in your environment.'));
+        return;
+      }
       
       const pythonProcess = spawn(pythonCmd, [
         scriptPath

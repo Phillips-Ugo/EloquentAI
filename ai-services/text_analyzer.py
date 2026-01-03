@@ -185,98 +185,12 @@ class TextAnalyzer:
             # DO NOT return fallback - let the error propagate
             raise
     
-    def _create_fallback_analysis(self, text_content: str) -> Dict[str, Any]:
-        """
-        Create a fallback analysis when ChatGPT is not available
-        """
-        # Clean the text content first
-        text_content = self._clean_text_content(text_content)
-        
-        # Basic text analysis
-        word_count = len(text_content.split())
-        char_count = len(text_content)
-        sentence_count = text_content.count('.') + text_content.count('!') + text_content.count('?')
-        
-        # Calculate basic metrics for more realistic ratings
-        avg_sentence_length = word_count / max(sentence_count, 1)
-        
-        # Calculate readability score based on sentence complexity
-        if avg_sentence_length <= 10:
-            readability_score = 0.9  # Very clear
-        elif avg_sentence_length <= 15:
-            readability_score = 0.8  # Clear
-        elif avg_sentence_length <= 20:
-            readability_score = 0.7  # Moderate
-        elif avg_sentence_length <= 25:
-            readability_score = 0.6  # Somewhat complex
-        else:
-            readability_score = 0.5  # Complex
-        
-        # Calculate structure score based on paragraph breaks and transitions
-        paragraphs = text_content.split('\n\n')
-        if len(paragraphs) > 1:
-            structure_score = min(0.9, 0.6 + (len(paragraphs) * 0.1))
-        else:
-            structure_score = 0.6
-        
-        # Calculate engagement score based on question marks, exclamation points, and varied sentence types
-        engagement_indicators = text_content.count('?') + text_content.count('!') + text_content.count('"')
-        engagement_score = min(0.9, 0.5 + (engagement_indicators * 0.1))
-        
-        # Calculate impact score based on word count and content density
-        if word_count >= 50:
-            impact_score = min(0.9, 0.6 + (word_count / 100))
-        else:
-            impact_score = 0.5
-        
-        # Calculate overall score as average of all categories
-        overall_score = (readability_score + structure_score + engagement_score + impact_score) / 4
-        
-        result = {
-            "overallScore": round(overall_score, 2),
-            "strengths": [
-                f"Text contains {word_count} words with substantial content for analysis",
-                "Content demonstrates thoughtful consideration of the topic",
-                "Basic organizational structure is present and functional"
-            ],
-            "improvements": [
-                "Consider adding specific examples or case studies to support your points",
-                "Include more engaging opening statements to capture reader attention immediately",
-                "Add clear call-to-action elements to guide readers on next steps"
-            ],
-            "suggestions": [
-                "Break down complex sentences into shorter, more digestible segments for improved clarity",
-                "Add transition words and phrases to create smoother flow between ideas",
-                "Include relevant statistics, data, or expert quotes to strengthen your arguments"
-            ],
-            "categories": {
-                "clarity": round(readability_score, 2),
-                "engagement": round(engagement_score, 2),
-                "structure": round(structure_score, 2),
-                "impact": round(impact_score, 2)
-            },
-            "detailedAnalysis": {
-                "tone": "Professional",
-                "readability": f"Based on sentence complexity ({readability_score:.2f})",
-                "structure": f"Based on paragraph organization ({structure_score:.2f})",
-                "engagement": f"Based on interactive elements ({engagement_score:.2f})",
-                "actionability": f"Based on content length and density ({impact_score:.2f})"
-            },
-            "textStats": {
-                "wordCount": word_count,
-                "charCount": char_count,
-                "sentenceCount": sentence_count,
-                "avgSentenceLength": round(avg_sentence_length, 1)
-            },
-            "_source": "fallback"
-        }
-        
-        return result
+    # REMOVED: _create_fallback_analysis - no more fallbacks, errors must be fixed
     
     def _validate_analysis_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
         Validate and ensure all required fields are present in the analysis result
-        ONLY if GPT failed to provide them - don't override real GPT data
+        NO FALLBACKS - if data is incomplete, raise an error
         """
         # Check if this looks like real GPT data (has detailed content)
         has_real_gpt_data = (
@@ -289,21 +203,20 @@ class TextAnalyzer:
             len(result.get("suggestions", [])) >= 3
         )
         
-        if has_real_gpt_data:
-            # This is real GPT data, just validate scores are in range
-            if "overallScore" in result:
-                result["overallScore"] = max(0.0, min(1.0, float(result["overallScore"])))
-            
-            if "categories" in result:
-                for category, score in result["categories"].items():
-                    result["categories"][category] = max(0.0, min(1.0, float(score)))
-            
-            logger.info("Using real GPT analysis data")
-            return result
+        if not has_real_gpt_data:
+            logger.error("GPT data appears incomplete - this is an error, not a fallback case")
+            raise ValueError("GPT API returned incomplete analysis data. Expected detailed feedback with at least 3 strengths, 3 improvements, and 3 suggestions. This indicates an API issue that must be fixed.")
         
-        # Only use fallback if GPT data is clearly incomplete
-        logger.warning("GPT data appears incomplete, using fallback analysis")
-        return self._create_fallback_analysis("")  # Will be overridden with actual text
+        # This is real GPT data, validate scores are in range
+        if "overallScore" in result:
+            result["overallScore"] = max(0.0, min(1.0, float(result["overallScore"])))
+        
+        if "categories" in result:
+            for category, score in result["categories"].items():
+                result["categories"][category] = max(0.0, min(1.0, float(score)))
+        
+        logger.info("Using real GPT analysis data")
+        return result
 
     def _clean_text_content(self, text_content: str) -> str:
         """
