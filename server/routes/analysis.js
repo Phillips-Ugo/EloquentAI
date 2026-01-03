@@ -290,264 +290,52 @@ async function performAudioAnalysis(session) {
               };
               resolve(transformedResult);
             } else {
-              console.warn(`Audio analysis returned error, using fallback data: ${result.error}`);
-              // Provide fallback data if analysis fails
-              const fallbackResult = {
-                overallScore: 0.75,
-                clarity_score: 0.80,
-                pace_score: 0.70,
-                sentiment_score: 0.75,
-                engagement_score: 0.72,
-                strengths: [
-                  "Audio analysis completed successfully",
-                  "File processed without errors",
-                  "Basic metrics extracted"
-                ],
-                improvements: [
-                  "Consider using higher quality audio",
-                  "Ensure clear speech in recordings",
-                  "Practice speaking more clearly"
-                ],
-                suggestions: [
-                  "Use a good quality microphone for better results",
-                  "Record in a quiet environment",
-                  "Speak clearly and at a steady pace"
-                ],
-                categories: {
-                  clarity: 0.80,
-                  engagement: 0.72,
-                  structure: 0.75,
-                  impact: 0.73
-                },
-                detailedAnalysis: {
-                  tone: "Analysis completed",
-                  pace: "Analysis completed",
-                  volume: "Analysis completed",
-                  articulation: "Analysis completed",
-                  engagement: "Analysis completed"
-                },
-                audioMetrics: {
-                  duration: "Unknown",
-                  word_count: 0,
-                  speaking_rate: "Unknown",
-                  filler_word_count: 0,
-                  pause_count: 0,
-                  average_volume: "Unknown",
-                  speaking_pace: "Unknown"
-                },
-                filler_words: {},
-                transcript: "Audio analysis completed. For detailed transcript, ensure audio file is clear and contains speech."
-              };
-              resolve(fallbackResult);
+              // #region agent log
+              fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:293',message:'Audio analysis returned error',data:{error:result.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              // #endregion
+              console.error(`Audio analysis returned error: ${result.error}`);
+              reject(new Error(`Audio analysis failed: ${result.error}`));
+              return;
             }
           } catch (parseError) {
-            console.warn(`Failed to parse audio analysis results, using fallback data: ${parseError.message}`);
-            // Provide fallback data if parsing fails
-            const fallbackResult = {
-              overallScore: 0.75,
-              clarity_score: 0.80,
-              pace_score: 0.70,
-              sentiment_score: 0.75,
-              engagement_score: 0.72,
-              strengths: [
-                "Audio analysis completed successfully",
-                "File processed without errors",
-                "Basic metrics extracted"
-              ],
-              improvements: [
-                "Consider using higher quality audio",
-                "Ensure clear speech in recordings",
-                "Practice speaking more clearly"
-              ],
-              suggestions: [
-                "Use a good quality microphone for better results",
-                "Record in a quiet environment",
-                "Speak clearly and at a steady pace"
-              ],
-              categories: {
-                clarity: 0.80,
-                engagement: 0.72,
-                structure: 0.75,
-                impact: 0.73
-              },
-              detailedAnalysis: {
-                tone: "Analysis completed",
-                pace: "Analysis completed",
-                volume: "Analysis completed",
-                articulation: "Analysis completed",
-                engagement: "Analysis completed"
-              },
-              audioMetrics: {
-                duration: "Unknown",
-                word_count: 0,
-                speaking_rate: "Unknown",
-                filler_word_count: 0,
-                pause_count: 0,
-                average_volume: "Unknown",
-                speaking_pace: "Unknown"
-              },
-              filler_words: {},
-              transcript: "Audio analysis completed. For detailed transcript, ensure audio file is clear and contains speech."
-            };
-            resolve(fallbackResult);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:343',message:'Failed to parse audio results',data:{parseError:parseError.message,outputPreview:output.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+            console.error(`Failed to parse audio analysis results: ${parseError.message}`);
+            console.error('Raw output:', output);
+            reject(new Error(`Failed to parse audio analysis results: ${parseError.message}. Raw output: ${output.substring(0, 200)}`));
+            return;
           }
         } else {
-          console.warn(`Audio analysis failed with code ${code}, using fallback data: ${errorOutput}`);
-          // Provide fallback data if audio analysis fails
-          const fallbackResult = {
-            overallScore: 0.75,
-            clarity_score: 0.80,
-            pace_score: 0.70,
-            sentiment_score: 0.75,
-            engagement_score: 0.72,
-            strengths: [
-              "Audio analysis completed successfully",
-              "File processed without errors",
-              "Basic metrics extracted"
-            ],
-            improvements: [
-              "Consider using higher quality audio",
-              "Ensure clear speech in recordings",
-              "Practice speaking more clearly"
-            ],
-            suggestions: [
-              "Use a good quality microphone for better results",
-              "Record in a quiet environment",
-              "Speak clearly and at a steady pace"
-            ],
-            categories: {
-              clarity: 0.80,
-              engagement: 0.72,
-              structure: 0.75,
-              impact: 0.73
-            },
-            detailedAnalysis: {
-              tone: "Analysis completed",
-              pace: "Analysis completed",
-              volume: "Analysis completed",
-              articulation: "Analysis completed",
-              engagement: "Analysis completed"
-            },
-            audioMetrics: {
-              duration: "Unknown",
-              word_count: 0,
-              speaking_rate: "Unknown",
-              filler_word_count: 0,
-              pause_count: 0,
-              average_volume: "Unknown",
-              speaking_pace: "Unknown"
-            },
-            filler_words: {},
-            transcript: "Audio analysis completed. For detailed transcript, ensure audio file is clear and contains speech."
-          };
-          resolve(fallbackResult);
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:374',message:'Audio analysis process failed',data:{exitCode:code,errorOutput},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          console.error(`Audio analysis process failed with code ${code}`);
+          console.error('Error output:', errorOutput);
+          reject(new Error(`Audio analysis failed with exit code ${code}: ${errorOutput}`));
+          return;
         }
       });
 
       pythonProcess.on('error', (error) => {
-        console.warn(`Audio analysis failed, using fallback data: ${error.message}`);
-        // Provide fallback data if audio analysis fails
-        const fallbackResult = {
-          overallScore: 0.75,
-          clarity_score: 0.80,
-          pace_score: 0.70,
-          sentiment_score: 0.75,
-          engagement_score: 0.72,
-          strengths: [
-            "Audio analysis completed successfully",
-            "File processed without errors",
-            "Basic metrics extracted"
-          ],
-          improvements: [
-            "Consider using higher quality audio",
-            "Ensure clear speech in recordings",
-            "Practice speaking more clearly"
-          ],
-          suggestions: [
-            "Use a good quality microphone for better results",
-            "Record in a quiet environment",
-            "Speak clearly and at a steady pace"
-          ],
-          categories: {
-            clarity: 0.80,
-            engagement: 0.72,
-            structure: 0.75,
-            impact: 0.73
-          },
-          detailedAnalysis: {
-            tone: "Analysis completed",
-            pace: "Analysis completed",
-            volume: "Analysis completed",
-            articulation: "Analysis completed",
-            engagement: "Analysis completed"
-          },
-          audioMetrics: {
-            duration: "Unknown",
-            word_count: 0,
-            speaking_rate: "Unknown",
-            filler_word_count: 0,
-            pause_count: 0,
-            average_volume: "Unknown",
-            speaking_pace: "Unknown"
-          },
-          filler_words: {},
-          transcript: "Audio analysis completed. For detailed transcript, ensure audio file is clear and contains speech."
-        };
-        resolve(fallbackResult);
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:427',message:'Audio Python spawn error',data:{errorMessage:error.message,errorCode:error.code},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        console.error('Audio Python process error:', error);
+        reject(new Error(`Failed to start audio analysis: ${error.message}. Make sure Python 3 and required packages are installed.`));
       });
     });
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:499',message:'Audio analysis catch',data:{errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     console.error('Audio analysis error:', error);
-    // Provide fallback data
-    const fallbackResult = {
-      overallScore: 0.75,
-      clarity_score: 0.80,
-      pace_score: 0.70,
-      sentiment_score: 0.75,
-      engagement_score: 0.72,
-      strengths: [
-        "Audio analysis completed successfully",
-        "File processed without errors",
-        "Basic metrics extracted"
-      ],
-      improvements: [
-        "Consider using higher quality audio",
-        "Ensure clear speech in recordings",
-        "Practice speaking more clearly"
-      ],
-      suggestions: [
-        "Use a good quality microphone for better results",
-        "Record in a quiet environment",
-        "Speak clearly and at a steady pace"
-      ],
-      categories: {
-        clarity: 0.80,
-        engagement: 0.72,
-        structure: 0.75,
-        impact: 0.73
-      },
-      detailedAnalysis: {
-        tone: "Analysis completed",
-        pace: "Analysis completed",
-        volume: "Analysis completed",
-        articulation: "Analysis completed",
-        engagement: "Analysis completed"
-      },
-      audioMetrics: {
-        duration: "Unknown",
-        word_count: 0,
-        speaking_rate: "Unknown",
-        filler_word_count: 0,
-        pause_count: 0,
-        average_volume: "Unknown",
-        speaking_pace: "Unknown"
-      },
-      filler_words: {},
-      transcript: "Audio analysis completed. For detailed transcript, ensure audio file is clear and contains speech."
-    };
-    return fallbackResult;
+    // REMOVED FALLBACK - throw the error
+    throw error;
   }
 }
+
+// All fallback code removed - errors will now properly propagate
 
 async function performComprehensiveVideoAnalysis(session) {
   try {
@@ -676,9 +464,9 @@ async function performVideoAnalysis(session) {
 
       // Add timeout to prevent hanging
       const timeout = setTimeout(() => {
-        console.warn('Video analysis timed out, using fallback data');
+        console.error('Video analysis timed out');
         pythonProcess.kill();
-        resolve(fallbackResult);
+        reject(new Error('Video analysis timeout - process took too long (5 minutes)'));
       }, 300000); // 5 minute timeout
 
       pythonProcess.on('close', (code) => {
@@ -708,9 +496,37 @@ async function performVideoAnalysis(session) {
               console.log('Video analysis successful:', transformedResult);
               resolve(transformedResult);
             } else {
-              console.warn(`Video analysis returned error, using fallback data: ${result.error}`);
-              // Provide fallback data if analysis fails
-              const fallbackResult = {
+              console.error(`Video analysis returned error: ${result.error}`);
+              reject(new Error(`Video analysis failed: ${result.error}`));
+              return;
+            }
+          } catch (parseError) {
+            console.error(`Failed to parse video analysis results: ${parseError.message}`);
+            console.error(`Raw output: ${output}`);
+            reject(new Error(`Failed to parse video analysis results: ${parseError.message}. Raw output: ${output.substring(0, 200)}`));
+            return;
+          }
+        } else {
+          console.error(`Video analysis process failed with code ${code}`);
+          console.error('Error output:', errorOutput);
+          reject(new Error(`Video analysis failed with exit code ${code}: ${errorOutput}`));
+          return;
+        }
+      });
+
+      pythonProcess.on('error', (error) => {
+        console.error('Video Python process error:', error);
+        reject(new Error(`Failed to start video analysis: ${error.message}. Make sure Python 3 and required packages are installed.`));
+      });
+    });
+  } catch (error) {
+    console.error('Video analysis error:', error);
+    throw error;
+  }
+}
+
+// REMOVED: All fallback code - errors must be fixed, not hidden
+// The following was orphaned fallback code that has been removed:
                 overallScore: 0.75,
                 posture_score: 0.82,
                 eye_contact_score: 0.78,
@@ -756,256 +572,28 @@ async function performVideoAnalysis(session) {
               resolve(fallbackResult);
             }
           } catch (parseError) {
-            console.warn(`Failed to parse video analysis results, using fallback data: ${parseError.message}`);
-            console.log(`Raw output was: ${output}`);
-            // Provide fallback data if parsing fails
-            const fallbackResult = {
-              overallScore: 0.75,
-              posture_score: 0.82,
-              eye_contact_score: 0.78,
-              gesture_score: 0.70,
-              movement_score: 0.73,
-              strengths: [
-                "Video analysis completed successfully",
-                "File processed without errors",
-                "Basic metrics extracted"
-              ],
-              improvements: [
-                "Consider using higher quality video",
-                "Ensure good lighting in recordings",
-                "Practice presentation skills"
-              ],
-              suggestions: [
-                "Use good lighting for better analysis",
-                "Record in a quiet environment",
-                "Practice your presentation delivery"
-              ],
-              categories: {
-                posture: 0.82,
-                eye_contact: 0.78,
-                gestures: 0.70,
-                movement: 0.73
-              },
-              detailedAnalysis: {
-                posture: "Analysis completed",
-                eye_contact: "Analysis completed",
-                gestures: "Analysis completed",
-                movement: "Analysis completed",
-                presence: "Analysis completed"
-              },
-              videoMetrics: {
-                duration: "Unknown",
-                frame_count: 0,
-                fps: 0,
-                movement_score: 0.73,
-                gesture_count: 0,
-                eye_contact_percentage: 78
-              }
-            };
-            resolve(fallbackResult);
+            console.error(`Failed to parse video analysis results: ${parseError.message}`);
+            console.error(`Raw output: ${output}`);
+            reject(new Error(`Failed to parse video analysis results: ${parseError.message}. Raw output: ${output.substring(0, 200)}`));
+            return;
           }
         } else {
-          console.warn(`Video analysis failed with code ${code}, using fallback data: ${errorOutput}`);
-          // Provide fallback data if video analysis fails
-          const fallbackResult = {
-            overallScore: 0.75,
-            posture_score: 0.82,
-            eye_contact_score: 0.78,
-            gesture_score: 0.70,
-            movement_score: 0.73,
-            strengths: [
-              "Video analysis completed successfully",
-              "File processed without errors",
-              "Basic metrics extracted"
-            ],
-            improvements: [
-              "Consider using higher quality video",
-              "Ensure good lighting in recordings",
-              "Practice presentation skills"
-            ],
-            suggestions: [
-              "Use good lighting for better analysis",
-              "Record in a quiet environment",
-              "Practice your presentation delivery"
-            ],
-            categories: {
-              posture: 0.82,
-              eye_contact: 0.78,
-              gestures: 0.70,
-              movement: 0.73
-            },
-            detailedAnalysis: {
-              posture: "Analysis completed",
-              eye_contact: "Analysis completed",
-              gestures: "Analysis completed",
-              movement: "Analysis completed",
-              presence: "Analysis completed"
-            },
-            videoMetrics: {
-              duration: "Unknown",
-              frame_count: 0,
-              fps: 0,
-              movement_score: 0.73,
-              gesture_count: 0,
-              eye_contact_percentage: 78
-            }
-          };
-          resolve(fallbackResult);
+          console.error(`Video analysis process failed with code ${code}`);
+          console.error('Error output:', errorOutput);
+          reject(new Error(`Video analysis failed with exit code ${code}: ${errorOutput}`));
+          return;
         }
       });
 
       pythonProcess.on('error', (error) => {
-        console.warn(`Video analysis failed, using fallback data: ${error.message}`);
-        // Provide fallback data if video analysis fails
-        const fallbackResult = {
-          overallScore: 0.75,
-          posture_score: 0.82,
-          eye_contact_score: 0.78,
-          gesture_score: 0.70,
-          movement_score: 0.73,
-          strengths: [
-            "Video analysis completed successfully",
-            "File processed without errors",
-            "Basic metrics extracted"
-          ],
-          improvements: [
-            "Consider using higher quality video",
-            "Ensure good lighting in recordings",
-            "Practice presentation skills"
-          ],
-          suggestions: [
-            "Use good lighting for better analysis",
-            "Record in a quiet environment",
-            "Practice your presentation delivery"
-          ],
-          categories: {
-            posture: 0.82,
-            eye_contact: 0.78,
-            gestures: 0.70,
-            movement: 0.73
-          },
-          detailedAnalysis: {
-            posture: "Analysis completed",
-            eye_contact: "Analysis completed",
-            gestures: "Analysis completed",
-            movement: "Analysis completed",
-            presence: "Analysis completed"
-          },
-          videoMetrics: {
-            duration: "Unknown",
-            frame_count: 0,
-            fps: 0,
-            movement_score: 0.73,
-            gesture_count: 0,
-            eye_contact_percentage: 78
-          }
-        };
-        resolve(fallbackResult);
+        console.error('Video Python process error:', error);
+        reject(new Error(`Failed to start video analysis: ${error.message}. Make sure Python 3 and required packages are installed.`));
       });
     });
   } catch (error) {
     console.error('Video analysis error:', error);
-    // Provide fallback data
-    const fallbackResult = {
-      overallScore: 0.75,
-      posture_score: 0.82,
-      eye_contact_score: 0.78,
-      gesture_score: 0.70,
-      movement_score: 0.73,
-      strengths: [
-        "Video analysis completed successfully",
-        "File processed without errors",
-        "Basic metrics extracted"
-      ],
-      improvements: [
-        "Consider using higher quality video",
-        "Ensure good lighting in recordings",
-        "Practice presentation skills"
-      ],
-      suggestions: [
-        "Use good lighting for better analysis",
-        "Record in a quiet environment",
-        "Practice your presentation delivery"
-      ],
-      categories: {
-        posture: 0.82,
-        eye_contact: 0.78,
-        gestures: 0.70,
-        movement: 0.73
-      },
-      detailedAnalysis: {
-        posture: "Analysis completed",
-        eye_contact: "Analysis completed",
-        gestures: "Analysis completed",
-        movement: "Analysis completed",
-        presence: "Analysis completed"
-      },
-      videoMetrics: {
-        duration: "Unknown",
-        frame_count: 0,
-        fps: 0,
-        movement_score: 0.73,
-        gesture_count: 0,
-        eye_contact_percentage: 78
-      }
-    };
-    return fallbackResult;
+    throw error;
   }
-}
-
-// Fallback text analysis when Python is not available
-function generateFallbackTextAnalysis(session) {
-  const text = session.textContent || '';
-  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-  const charCount = text.length;
-  const sentenceCount = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
-  
-  // Simple heuristics for scoring
-  const avgWordsPerSentence = sentenceCount > 0 ? wordCount / sentenceCount : 0;
-  const avgCharsPerWord = wordCount > 0 ? charCount / wordCount : 0;
-  
-  // Calculate scores based on text metrics
-  const clarityScore = Math.min(0.95, Math.max(0.6, 0.7 + (avgWordsPerSentence > 10 && avgWordsPerSentence < 25 ? 0.15 : 0)));
-  const structureScore = Math.min(0.95, Math.max(0.6, 0.7 + (sentenceCount > 3 ? 0.15 : 0)));
-  const engagementScore = Math.min(0.95, Math.max(0.6, 0.7 + (text.length > 100 ? 0.15 : 0)));
-  const overallScore = (clarityScore + structureScore + engagementScore) / 3;
-  
-  return {
-    overallScore: Math.round(overallScore * 100) / 100,
-    clarity_score: Math.round(clarityScore * 100) / 100,
-    structure_score: Math.round(structureScore * 100) / 100,
-    engagement_score: Math.round(engagementScore * 100) / 100,
-    sentiment_score: 0.75,
-    strengths: [
-      text.length > 100 ? "Good content length" : "Content provided",
-      sentenceCount > 3 ? "Well-structured text" : "Text structure present",
-      wordCount > 20 ? "Adequate word count" : "Content available"
-    ],
-    improvements: [
-      "Consider adding more detail to your content",
-      "Vary sentence length for better flow",
-      "Use active voice where possible"
-    ],
-    suggestions: [
-      "Break long paragraphs into shorter ones",
-      "Use transition words to connect ideas",
-      "Add examples to support your points"
-    ],
-    categories: {
-      clarity: clarityScore,
-      structure: structureScore,
-      engagement: engagementScore,
-      impact: overallScore
-    },
-    detailedAnalysis: {
-      word_count: wordCount,
-      character_count: charCount,
-      sentence_count: sentenceCount,
-      avg_words_per_sentence: Math.round(avgWordsPerSentence * 10) / 10,
-      avg_chars_per_word: Math.round(avgCharsPerWord * 10) / 10
-    },
-    transcript: text.substring(0, 500) + (text.length > 500 ? '...' : '')
-  };
 }
 
 async function performTextAnalysis(session, analysisType) {
@@ -1134,22 +722,32 @@ async function performTextAnalysis(session, analysisType) {
             
             const result = JSON.parse(output);
             // #region agent log
-            fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1078',message:'Parsed Python result',data:{success:result.success,hasData:!!result.data,source:result.data?._source,error:result.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1078',message:'Parsed Python result',data:{success:result.success,hasData:!!result.data,dataKeys:result.data?Object.keys(result.data):[],source:result.data?._source,error:result.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
             // #endregion
             
-            if (result.success) {
+            if (result.success && result.data) {
+              // Check if this is fallback data (from Python's internal fallback)
+              if (result.data._source === 'fallback') {
+                // #region agent log
+                fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1083',message:'Python returned fallback data',data:{source:result.data._source},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
+                reject(new Error('Python analysis failed - GPT API unavailable or returned invalid response. Check OPENAI_API_KEY and API status.'));
+                return;
+              }
+              
               console.log('Text analysis completed successfully');
               console.log('Analysis source:', result.data._source || 'unknown');
               // #region agent log
-              fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1082',message:'Text analysis success',data:{source:result.data._source},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1090',message:'Text analysis success',data:{source:result.data._source,hasOverallScore:!!result.data.overallScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
               // #endregion
+              // Python returns camelCase (overallScore), use it directly
               resolve(result.data);
             } else {
               // #region agent log
-              fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1085',message:'Text analysis failed in result',data:{error:result.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1095',message:'Text analysis failed in result',data:{success:result.success,error:result.error,hasData:!!result.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
               // #endregion
-              console.log('Text analysis failed:', result.error);
-              reject(new Error(result.error || 'Text analysis failed'));
+              console.error('Text analysis failed:', result.error);
+              reject(new Error(result.error || 'Text analysis failed - Python script returned error'));
             }
           } catch (parseError) {
             // #region agent log

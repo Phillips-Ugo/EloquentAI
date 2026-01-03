@@ -156,19 +156,23 @@ class TextAnalyzer:
                             for category, score in analysis_result["categories"].items():
                                 analysis_result["categories"][category] = max(0.0, min(1.0, float(score)))
                     else:
-                        logger.warning("GPT response lacks detailed content, using fallback")
-                        analysis_result = self._create_fallback_analysis(text_content)
+                        logger.error("GPT response lacks detailed content - this is an error")
+                        raise ValueError(f"GPT API returned incomplete analysis. Expected detailed feedback but got: {analysis_text[:200]}")
                 else:
-                    logger.warning("No JSON found in ChatGPT response, using fallback")
-                    analysis_result = self._create_fallback_analysis(text_content)
+                    logger.error("No JSON found in ChatGPT response - this is an error")
+                    raise ValueError(f"GPT API response does not contain valid JSON. Response: {analysis_text[:200]}")
                     
             except json.JSONDecodeError as e:
-                logger.warning(f"Failed to parse JSON response: {e}")
-                logger.warning(f"Raw response: {analysis_text}")
-                analysis_result = self._create_fallback_analysis(text_content)
+                logger.error(f"Failed to parse JSON response: {e}")
+                logger.error(f"Raw response: {analysis_text}")
+                raise ValueError(f"Failed to parse GPT API response as JSON: {e}. Response: {analysis_text[:200]}")
             
-            # Add source indicator
-            analysis_result["_source"] = "gpt" if has_detailed_content else "fallback"
+            # Add source indicator - NO FALLBACK, fail if GPT doesn't work
+            if not has_detailed_content:
+                logger.error("GPT response lacks detailed content - this is an error, not a fallback case")
+                raise ValueError("GPT API returned incomplete analysis. Response may be malformed or API may be experiencing issues.")
+            
+            analysis_result["_source"] = "gpt"
             
             return {
                 "success": True,
@@ -177,11 +181,9 @@ class TextAnalyzer:
             
         except Exception as e:
             logger.error(f"Error in text analysis: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "data": self._create_fallback_analysis(text_content)
-            }
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # DO NOT return fallback - let the error propagate
+            raise
     
     def _create_fallback_analysis(self, text_content: str) -> Dict[str, Any]:
         """
