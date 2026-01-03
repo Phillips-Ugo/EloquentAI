@@ -63,12 +63,40 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/health', healthRoutes);
 
-// Serve static files from React build
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/build')));
+// Serve static files from React build (only if build directory exists)
+// This is for local development or if frontend is deployed with backend
+const clientBuildPath = path.join(__dirname, '../client/build');
+const clientBuildExists = fs.existsSync(clientBuildPath) && fs.existsSync(path.join(clientBuildPath, 'index.html'));
+
+if (clientBuildExists) {
+  app.use(express.static(clientBuildPath));
   
+  // Catch-all handler: send back React's index.html file for client-side routing
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build/index.html'));
+    // Don't serve index.html for API routes
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({
+        success: false,
+        message: 'API route not found'
+      });
+    }
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+} else {
+  // If client build doesn't exist (e.g., frontend deployed separately on Vercel)
+  // Only serve API routes and return 404 for non-API routes
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api/')) {
+      return res.status(404).json({
+        success: false,
+        message: 'Frontend is deployed separately. Please access the frontend URL.',
+        info: 'This is an API-only server.'
+      });
+    }
+    res.status(404).json({
+      success: false,
+      message: 'API route not found'
+    });
   });
 }
 
