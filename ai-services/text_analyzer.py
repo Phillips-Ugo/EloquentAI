@@ -349,24 +349,60 @@ if __name__ == "__main__":
     import json
     
     try:
+        import traceback
         # Read input from stdin with proper UTF-8 handling
         input_data = sys.stdin.buffer.read().decode('utf-8', errors='ignore')
+        sys.stderr.write(f"DEBUG: Received input data, length: {len(input_data)}\n")
+        sys.stderr.flush()
+        
         request = json.loads(input_data)
+        sys.stderr.write(f"DEBUG: Parsed input JSON successfully\n")
+        sys.stderr.flush()
         
         text_content = request.get('text_content', '')
         analysis_type = request.get('analysis_type', 'text')
         
+        sys.stderr.write(f"DEBUG: Text content length: {len(text_content)}, analysis_type: {analysis_type}\n")
+        sys.stderr.write(f"DEBUG: OPENAI_API_KEY present: {bool(os.getenv('OPENAI_API_KEY'))}\n")
+        sys.stderr.flush()
+        
         if not text_content:
+            sys.stderr.write("ERROR: No text content provided\n")
+            sys.stderr.flush()
             print(json.dumps({
                 "success": False,
                 "error": "No text content provided"
             }))
             sys.exit(1)
         
-        analyzer = TextAnalyzer()
-        result = analyzer.analyze_text(text_content)
+        try:
+            analyzer = TextAnalyzer()
+            sys.stderr.write("DEBUG: TextAnalyzer initialized successfully\n")
+            sys.stderr.flush()
+        except Exception as init_error:
+            sys.stderr.write(f"ERROR: Failed to initialize TextAnalyzer: {init_error}\n")
+            sys.stderr.write(f"ERROR: Traceback: {traceback.format_exc()}\n")
+            sys.stderr.flush()
+            raise
+        
+        try:
+            result = analyzer.analyze_text(text_content)
+            sys.stderr.write(f"DEBUG: Analysis completed, result keys: {list(result.keys()) if result else 'None'}\n")
+            sys.stderr.flush()
+        except Exception as analysis_error:
+            sys.stderr.write(f"ERROR: Analysis failed: {analysis_error}\n")
+            sys.stderr.write(f"ERROR: Traceback: {traceback.format_exc()}\n")
+            sys.stderr.flush()
+            raise
+        
         # Ensure proper UTF-8 encoding for output
-        print(json.dumps(result, ensure_ascii=False))
+        output_json = json.dumps({
+            "success": True,
+            "data": result
+        }, ensure_ascii=False)
+        sys.stderr.write(f"DEBUG: Output JSON length: {len(output_json)}\n")
+        sys.stderr.flush()
+        print(output_json)
         
     except json.JSONDecodeError:
         print(json.dumps({
@@ -375,8 +411,15 @@ if __name__ == "__main__":
         }, ensure_ascii=False))
         sys.exit(1)
     except Exception as e:
+        import traceback
+        error_msg = str(e)
+        error_traceback = traceback.format_exc()
+        sys.stderr.write(f"ERROR: Unhandled exception: {error_msg}\n")
+        sys.stderr.write(f"ERROR: Traceback: {error_traceback}\n")
+        sys.stderr.flush()
         print(json.dumps({
             "success": False,
-            "error": str(e)
+            "error": error_msg,
+            "traceback": error_traceback if os.getenv('DEBUG', 'false').lower() == 'true' else None
         }, ensure_ascii=False))
         sys.exit(1) 
