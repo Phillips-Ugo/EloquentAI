@@ -66,7 +66,7 @@ async function checkPythonDependencies(pythonCmd) {
   return new Promise((resolve, reject) => {
     const checkProcess = spawn(pythonCmd, [
       '-c',
-      'import openai; import json; import os; print("OK")'
+      'import google.generativeai; import json; import os; print("OK")'
     ]);
     
     let errorOutput = '';
