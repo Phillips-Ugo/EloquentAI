@@ -70,9 +70,16 @@ async function ensurePythonService(type) {
 router.post('/:analysisId', async (req, res) => {
   try {
     const { analysisId } = req.params;
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:70',message:'Analysis route entry',data:{analysisId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     const sessionPath = path.join(__dirname, '../sessions', `${analysisId}.json`);
     
     if (!await fs.pathExists(sessionPath)) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:75',message:'Session not found',data:{analysisId,sessionPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       return res.status(404).json({
         success: false,
         message: 'Analysis session not found'
@@ -80,6 +87,10 @@ router.post('/:analysisId', async (req, res) => {
     }
 
     const session = await fs.readJson(sessionPath);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:82',message:'Session loaded',data:{analysisId,status:session.status,uploadMode:session.uploadMode,type:session.type,hasTextContent:!!session.textContent},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     
     if (session.status !== 'uploaded') {
       return res.status(400).json({
@@ -96,18 +107,28 @@ router.post('/:analysisId', async (req, res) => {
     try {
       // Determine analysis type and start appropriate service
       const analysisType = session.type || 'speech';
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:98',message:'Before ensurePythonService',data:{analysisType,uploadMode:session.uploadMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       await ensurePythonService(analysisType);
 
       let analysisResult;
 
       // Handle different upload modes
       if (session.uploadMode === 'text') {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:104',message:'Calling performTextAnalysis',data:{analysisType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         // Text analysis
         analysisResult = await performTextAnalysis(session, analysisType);
       } else {
         // File analysis (audio/video)
         analysisResult = await performFileAnalysis(session, analysisType);
       }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:112',message:'Analysis completed',data:{hasResult:!!analysisResult,resultKeys:analysisResult?Object.keys(analysisResult):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
 
       // Update session with results
       session.status = 'completed';
@@ -989,6 +1010,10 @@ function generateFallbackTextAnalysis(session) {
 
 async function performTextAnalysis(session, analysisType) {
   try {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:990',message:'performTextAnalysis entry',data:{sessionId:session.id,analysisType,hasTextContent:!!session.textContent,textLength:session.textContent?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     // Check if Python is available and script exists
     const { spawn } = require('child_process');
     const path = require('path');
@@ -1001,12 +1026,19 @@ async function performTextAnalysis(session, analysisType) {
     const scriptPath = path.join(__dirname, '../../ai-services/text_analyzer.py');
     const scriptExists = await fs.pathExists(scriptPath);
     
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1001',message:'Script path check',data:{scriptPath,scriptExists,resolvedPath:require('path').resolve(scriptPath),cwd:process.cwd()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    
     console.log('Script path:', scriptPath);
     console.log('Script exists:', scriptExists);
     console.log('Working directory:', path.join(__dirname, '../../ai-services'));
     
     // Always try Python first - it should be available in production
     if (!scriptExists) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1009',message:'Script not found error',data:{scriptPath,resolvedPath:require('path').resolve(scriptPath)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       console.error('Text analyzer script not found at:', scriptPath);
       throw new Error('Text analyzer script not found');
     }
@@ -1016,18 +1048,29 @@ async function performTextAnalysis(session, analysisType) {
     return new Promise((resolve, reject) => {
       // Determine Python command
       const pythonCmd = process.env.PYTHON_CMD || 'python3';
+      const workingDir = path.join(__dirname, '../../ai-services');
+      const pythonPath = path.join(__dirname, '../../ai-services');
+      const envVars = {
+        ...process.env,
+        PYTHONPATH: pythonPath,
+        PYTHONUNBUFFERED: '1'
+      };
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1018',message:'Before Python spawn',data:{pythonCmd,scriptPath,workingDir,pythonPath,hasOpenAIKey:!!envVars.OPENAI_API_KEY,openAIKeyLength:envVars.OPENAI_API_KEY?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       
       const pythonProcess = spawn(pythonCmd, [
         scriptPath
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        cwd: path.join(__dirname, '../../ai-services'),
-        env: {
-          ...process.env,
-          PYTHONPATH: path.join(__dirname, '../../ai-services'),
-          PYTHONUNBUFFERED: '1'
-        }
+        cwd: workingDir,
+        env: envVars
       });
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1032',message:'Python process spawned',data:{pid:pythonProcess.pid,pythonCmd,scriptPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       
       console.log('Python process started with PID:', pythonProcess.pid);
 
@@ -1044,6 +1087,10 @@ async function performTextAnalysis(session, analysisType) {
         analysis_type: analysisType
       });
       
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1042',message:'Sending input to Python',data:{inputLength:inputData.length,textContentLength:session.textContent?.length||0,analysisType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       console.log('Sending data to Python process, length:', inputData.length);
       pythonProcess.stdin.write(inputData);
       pythonProcess.stdin.end();
@@ -1059,6 +1106,9 @@ async function performTextAnalysis(session, analysisType) {
       pythonProcess.stderr.on('data', (data) => {
         errorOutput += data.toString();
         console.log('Python stderr:', data.toString());
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1060',message:'Python stderr data',data:{stderrChunk:data.toString(),errorOutputLength:errorOutput.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
       });
 
       pythonProcess.on('close', (code) => {
@@ -1067,29 +1117,52 @@ async function performTextAnalysis(session, analysisType) {
         console.log('Output length:', output.length);
         console.log('Error output length:', errorOutput.length);
         
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1064',message:'Python process closed',data:{exitCode:code,outputLength:output.length,errorOutputLength:errorOutput.length,hasOutput:!!output.trim(),errorOutputPreview:errorOutput.substring(0,500),outputPreview:output.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         if (code === 0) {
           try {
             if (!output.trim()) {
+              // #region agent log
+              fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1072',message:'No output from Python',data:{code,errorOutput},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+              // #endregion
               console.log('No output from Python process');
               reject(new Error('No output from text analysis process'));
               return;
             }
             
             const result = JSON.parse(output);
-                            if (result.success) {
-                  console.log('Text analysis completed successfully');
-                  console.log('Analysis source:', result.data._source || 'unknown');
-                  resolve(result.data);
-                } else {
-                  console.log('Text analysis failed:', result.error);
-                  reject(new Error(result.error || 'Text analysis failed'));
-                }
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1078',message:'Parsed Python result',data:{success:result.success,hasData:!!result.data,source:result.data?._source,error:result.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+            
+            if (result.success) {
+              console.log('Text analysis completed successfully');
+              console.log('Analysis source:', result.data._source || 'unknown');
+              // #region agent log
+              fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1082',message:'Text analysis success',data:{source:result.data._source},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              // #endregion
+              resolve(result.data);
+            } else {
+              // #region agent log
+              fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1085',message:'Text analysis failed in result',data:{error:result.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              // #endregion
+              console.log('Text analysis failed:', result.error);
+              reject(new Error(result.error || 'Text analysis failed'));
+            }
           } catch (parseError) {
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1087',message:'Parse error',data:{parseError:parseError.message,outputPreview:output.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
             console.log('Failed to parse analysis results:', parseError);
             console.log('Raw output:', output);
             reject(new Error('Failed to parse analysis results'));
           }
         } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1095',message:'Python process failed',data:{exitCode:code,errorOutput,errorOutputLength:errorOutput.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
           console.log('Text analysis process failed with code:', code);
           console.log('Error output:', errorOutput);
           reject(new Error(`Text analysis failed with code ${code}: ${errorOutput}`));
@@ -1098,6 +1171,9 @@ async function performTextAnalysis(session, analysisType) {
 
       pythonProcess.on('error', (error) => {
         clearTimeout(timeout);
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1099',message:'Python spawn error',data:{errorMessage:error.message,errorCode:error.code,pythonCmd,scriptPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         console.error('Python process error:', error);
         console.error('Error details:', {
           message: error.message,
@@ -1164,6 +1240,9 @@ async function performTextAnalysis(session, analysisType) {
       });
     });
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:1166',message:'performTextAnalysis catch',data:{errorMessage:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     console.error('Text analysis error:', error);
     throw error;
   }
