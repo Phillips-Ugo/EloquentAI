@@ -277,23 +277,15 @@ async function performAudioAnalysis(session) {
           try {
             const result = JSON.parse(output);
             if (result.success) {
-              // Transform the result to match the expected format
-              const transformedResult = {
-                overallScore: result.data.overall_score,
-                clarity_score: result.data.clarity_score,
-                pace_score: result.data.pace_score,
-                sentiment_score: result.data.sentiment_score,
-                engagement_score: result.data.engagement_score,
-                strengths: result.data.strengths,
-                improvements: result.data.improvements,
-                suggestions: result.data.suggestions,
-                categories: result.data.categories,
-                detailedAnalysis: result.data.detailed_analysis,
-                audioMetrics: result.data.audio_metrics,
-                filler_words: result.data.filler_words,
-                transcript: result.data.transcript
-              };
-              resolve(transformedResult);
+              // Transform to standard format using transformer
+              try {
+                const transformedResult = transformAnalysisResult(result.data, 'audio');
+                resolve(transformedResult);
+              } catch (transformError) {
+                console.error('Error transforming audio analysis result:', transformError);
+                reject(new Error(`Invalid audio analysis result format: ${transformError.message}`));
+                return;
+              }
             } else {
               // #region agent log
               fetch('http://127.0.0.1:7243/ingest/8c8146d9-5964-4fef-a23d-311da76a87d3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'analysis.js:293',message:'Audio analysis returned error',data:{error:result.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
